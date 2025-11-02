@@ -22,8 +22,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-
 private:
-	UPROEPRTY(EditAnywhere, Category = "Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> MagicultContext;
 };
