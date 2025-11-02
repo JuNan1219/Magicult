@@ -7,6 +7,7 @@
 #include "MagicultPlayerController.generated.h"
 
 class UInputMappingContext;
+class UInputAction;
 
 /**
  * 
@@ -21,8 +22,12 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> MagicultContext;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
 };
