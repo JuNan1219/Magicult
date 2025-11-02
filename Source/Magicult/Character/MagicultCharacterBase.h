@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "MagicultCharacterBase.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class MAGICULT_API AMagicultCharacterBase : public ACharacter
 {
 	GENERATED_BODY()
@@ -16,8 +16,5 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-public:	
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 };

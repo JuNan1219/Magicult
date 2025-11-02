@@ -15,10 +15,3 @@ void AMagicultCharacterBase::BeginPlay()
 	
 }
 
-
-void AMagicultCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-}
-
