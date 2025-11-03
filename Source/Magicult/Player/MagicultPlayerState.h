@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "AbilitySystemInterface.h"
 #include "MagicultPlayerState.generated.h"
 
 class UAbilitySystemComponent;
@@ -12,12 +13,15 @@ class UAttributeSet;
  * 
  */
 UCLASS()
-class MAGICULT_API AMagicultPlayerState : public APlayerState
+class MAGICULT_API AMagicultPlayerState : public APlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
 	AMagicultPlayerState();
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 	
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;

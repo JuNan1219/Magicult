@@ -2,8 +2,8 @@
 
 
 #include "MagicultEnemy.h"
-#include "AbilitySystem/MagicultAbilitySystemComponent.h"
-#include "AbilitySystem/MagicultAttributeSet.h"
+#include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
+#include "Magicult/AbilitySystem/MagicultAttributeSet.h"
 
 AMagicultEnemy::AMagicultEnemy()
 {

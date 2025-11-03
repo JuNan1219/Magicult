@@ -3,8 +3,8 @@
 
 #include "MagicultPlayerState.h"
 
-#include "AbilitySystem/MagicultAbilitySystemComponent.h"
-#include "AbilitySystem/MagicultAttributeSet.h"
+#include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
+#include "Magicult/AbilitySystem/MagicultAttributeSet.h"
 
 AMagicultPlayerState::AMagicultPlayerState()
 {
@@ -14,4 +14,9 @@ AMagicultPlayerState::AMagicultPlayerState()
 	AbilitySystemComponent->SetIsReplicated(true);
 
 	AttributeSet = CreateDefaultSubobject<UMagicultAttributeSet>("AttributeSet");
+}
+
+UAbilitySystemComponent* AMagicultPlayerState::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
 }

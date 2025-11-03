@@ -12,6 +12,11 @@ AMagicultCharacterBase::AMagicultCharacterBase()
 	Weapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+UAbilitySystemComponent* AMagicultCharacterBase::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
 void AMagicultCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
