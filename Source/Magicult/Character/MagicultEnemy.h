@@ -16,5 +16,5 @@ class MAGICULT_API AMagicultEnemy : public AMagicultCharacterBase
 
 public:
 	AMagicultEnemy();
-	
+	virtual void BeginPlay() override;
 };

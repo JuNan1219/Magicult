@@ -12,6 +12,7 @@ AMagicultPlayerState::AMagicultPlayerState()
 
 	AbilitySystemComponent = CreateDefaultSubobject<UMagicultAbilitySystemComponent>("AbilitySystemComponent");
 	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet = CreateDefaultSubobject<UMagicultAttributeSet>("AttributeSet");
 }

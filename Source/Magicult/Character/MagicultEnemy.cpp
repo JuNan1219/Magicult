@@ -13,3 +13,9 @@ AMagicultEnemy::AMagicultEnemy()
 
 	AttributeSet = CreateDefaultSubobject<UMagicultAttributeSet>("AttributeSet");
 }
+
+void AMagicultEnemy::BeginPlay()
+{
+	Super::BeginPlay();
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+}

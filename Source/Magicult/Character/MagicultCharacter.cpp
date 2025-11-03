@@ -6,6 +6,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "AbilitySystemComponent.h"
+
+#include "Magicult/Player/MagicultPlayerState.h"
 
 AMagicultCharacter::AMagicultCharacter()
 {
@@ -21,4 +24,29 @@ AMagicultCharacter::AMagicultCharacter()
 void AMagicultCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void AMagicultCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// 서버 : Init ability actor info
+	InitAbilityActorInfo();
+}
+
+void AMagicultCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	// 클라이언트 : Init ability actor info
+	InitAbilityActorInfo();
+}
+
+void AMagicultCharacter::InitAbilityActorInfo()
+{
+	AMagicultPlayerState* MagicultPlayerState = GetPlayerState<AMagicultPlayerState>();
+	check(MagicultPlayerState);
+	MagicultPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(MagicultPlayerState, this);
+	AbilitySystemComponent = MagicultPlayerState->GetAbilitySystemComponent();
+	AttributeSet = MagicultPlayerState->GetAttributeSet();
 }

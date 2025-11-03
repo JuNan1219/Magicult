@@ -5,6 +5,7 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "AbilitySystemComponent.h"
 
 
 AMagicultPlayerController::AMagicultPlayerController()
@@ -41,7 +42,7 @@ void AMagicultPlayerController::CursorTrace()
 {
 	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 	if (!CursorHit.bBlockingHit) return;
-	
+
 
 }
 
