@@ -7,7 +7,7 @@
 
 UMagicultAttributeSet::UMagicultAttributeSet()
 {
-
+	InitHealth(100.f);
 }
 
 void UMagicultAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
