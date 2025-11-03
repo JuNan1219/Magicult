@@ -12,6 +12,40 @@ AMagicultPlayerController::AMagicultPlayerController()
 	bReplicates = true;
 }
 
+void AMagicultPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	CursorTrace();
+	CursorDirection();
+}
+
+void AMagicultPlayerController::CursorDirection()
+{
+	if (!CursorHit.bBlockingHit) return;
+
+	if (APawn* ControlledPawn = GetPawn<APawn>())
+	{
+		const FVector& PlayerLocation = ControlledPawn->GetActorLocation();
+		const FVector& CursorLocation = CursorHit.ImpactPoint;
+
+		FVector Direction = CursorLocation - PlayerLocation;
+		Direction.Z = 0.f;
+
+		ControlledPawn->SetActorRelativeRotation(Direction.Rotation());
+	}
+}
+
+
+void AMagicultPlayerController::CursorTrace()
+{
+	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	if (!CursorHit.bBlockingHit) return;
+	
+
+}
+
+
 void AMagicultPlayerController::BeginPlay()
 {
 	Super::BeginPlay();

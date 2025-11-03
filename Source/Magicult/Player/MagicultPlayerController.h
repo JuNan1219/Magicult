@@ -20,6 +20,9 @@ class MAGICULT_API AMagicultPlayerController : public APlayerController
 	
 public:
 	AMagicultPlayerController();
+	virtual void PlayerTick(float DeltaTime) override;
+
+	void CursorDirection();
 
 protected:
 	virtual void BeginPlay() override;
@@ -34,4 +37,7 @@ private:
 
 	void Move(const FInputActionValue& InputActionValue);
 
+	void CursorTrace();
+
+	FHitResult CursorHit;
 };
