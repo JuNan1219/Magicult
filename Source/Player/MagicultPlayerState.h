@@ -17,4 +17,9 @@ class MAGICULT_API AMagicultPlayerState : public APlayerState
 public:
 	AMagicultPlayerState();
 	
+	UPROPERTY()
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY()
+	TObjectPtr<UAttributeSet> AttributeSet;
 };

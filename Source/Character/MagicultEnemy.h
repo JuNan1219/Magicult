@@ -13,5 +13,8 @@ UCLASS()
 class MAGICULT_API AMagicultEnemy : public AMagicultCharacterBase
 {
 	GENERATED_BODY()
+
+public:
+	AMagicultEnemy();
 	
 };

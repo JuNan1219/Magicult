@@ -6,6 +6,9 @@
 #include "GameFramework/Character.h"
 #include "MagicultCharacterBase.generated.h"
 
+class UAbilitySystemComponent;
+class UAttributeSet;
+
 UCLASS(Abstract)
 class MAGICULT_API AMagicultCharacterBase : public ACharacter
 {
@@ -19,4 +22,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<UStaticMeshComponent> Weapon;
+
+	UPROPERTY()
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY()
+	TObjectPtr<UAttributeSet> AttributeSet;
+	
 };
