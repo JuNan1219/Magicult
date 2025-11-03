@@ -20,9 +20,4 @@ public:
 
 	virtual void BeginPlay() override;
 private:
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<USpringArmComponent> CameraArm;
-
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<UCameraComponent> Camera;
 };

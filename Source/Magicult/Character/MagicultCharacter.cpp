@@ -5,16 +5,17 @@
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AMagicultCharacter::AMagicultCharacter()
 {
-	CameraArm = CreateDefaultSubobject<USpringArmComponent>("CameraArm");
-	CameraArm->SetupAttachment(RootComponent);
-	CameraArm->TargetArmLength = 1200.f;
-	CameraArm->SocketOffset = FVector(0.f, 0.f, 900.f);
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bConstrainToPlane = true;
+	GetCharacterMovement()->bSnapToPlaneAtStart = true;
 
-	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetupAttachment(CameraArm);
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	bUseControllerRotationYaw = false;
 }
 
 void AMagicultCharacter::BeginPlay()
