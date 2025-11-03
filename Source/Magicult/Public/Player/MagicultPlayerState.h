@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerState.h"
 #include "MagicultPlayerState.generated.h"
 
+class UAbilitySystemComponent;
+class UAttributeSet;
 /**
  * 
  */
