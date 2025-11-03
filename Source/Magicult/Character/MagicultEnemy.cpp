@@ -9,6 +9,7 @@ AMagicultEnemy::AMagicultEnemy()
 {
 	AbilitySystemComponent = CreateDefaultSubobject<UMagicultAbilitySystemComponent>("AbilitySystemComponent");
 	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
 	AttributeSet = CreateDefaultSubobject<UMagicultAttributeSet>("AttributeSet");
 }
