@@ -16,8 +16,8 @@ void UMagicultAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, ComputationalPower, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxComputationalPower, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, Mana, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxMana, COND_None, REPNOTIFY_Always);
 }
 
 void UMagicultAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
@@ -30,12 +30,12 @@ void UMagicultAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMax
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, MaxHealth, OldMaxHealth);
 }
 
-void UMagicultAttributeSet::OnRep_ComputationalPower(const FGameplayAttributeData& OldComputationalPower) const
+void UMagicultAttributeSet::OnRep_Mana(const FGameplayAttributeData& OldMana) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, ComputationalPower, OldComputationalPower);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, Mana, OldMana);
 }
 
-void UMagicultAttributeSet::OnRep_MaxComputationalPower(const FGameplayAttributeData& OldMaxComputationalPower) const
+void UMagicultAttributeSet::OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana) const
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, MaxComputationalPower, OldMaxComputationalPower);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, MaxMana, OldMaxMana);
 }

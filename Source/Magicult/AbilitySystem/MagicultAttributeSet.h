@@ -40,17 +40,17 @@ public:
 	UFUNCTION()
 	void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth) const;
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ComputationalPower, Category = "Attributes")
-	FGameplayAttributeData ComputationalPower;
-	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, ComputationalPower);
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Mana, Category = "Attributes")
+	FGameplayAttributeData Mana;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, Mana);
 
 	UFUNCTION()
-	void OnRep_ComputationalPower(const FGameplayAttributeData& OldComputationalPower) const;
+	void OnRep_Mana(const FGameplayAttributeData& Mana) const;
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxComputationalPower, Category = "Attributes")
-	FGameplayAttributeData MaxComputationalPower;
-	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, MaxComputationalPower);
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxMana, Category = "Attributes")
+	FGameplayAttributeData MaxMana;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, MaxMana);
 
 	UFUNCTION()
-	void OnRep_MaxComputationalPower(const FGameplayAttributeData& OldMaxComputationalPower) const;
+	void OnRep_MaxMana(const FGameplayAttributeData& MaxMana) const;
 };
