@@ -3,3 +3,8 @@
 
 #include "MagicultUserWidget.h"
 
+void UMagicultUserWidget::SetWidgetController(UObject* InWidgetController)
+{
+	WidgetController = InWidgetController;
+	WidgetControllerSet();
+}
