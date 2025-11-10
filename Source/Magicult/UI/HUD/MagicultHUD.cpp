@@ -10,6 +10,7 @@ void AMagicultHUD::BeginPlay()
 	Super::BeginPlay();
 
 	UUserWidget* Widget = CreateWidget<UUserWidget>(GetWorld(), OverlayWidgetClass);
+	check(Widget);
 	Widget->AddToViewport();
 
 }
