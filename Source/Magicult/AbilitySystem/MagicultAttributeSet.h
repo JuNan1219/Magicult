@@ -45,12 +45,12 @@ public:
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, Mana);
 
 	UFUNCTION()
-	void OnRep_Mana(const FGameplayAttributeData& Mana) const;
+	void OnRep_Mana(const FGameplayAttributeData& OldMana) const;
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxMana, Category = "Attributes")
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, MaxMana);
 
 	UFUNCTION()
-	void OnRep_MaxMana(const FGameplayAttributeData& MaxMana) const;
+	void OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana) const;
 };
