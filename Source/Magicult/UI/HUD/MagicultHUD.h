@@ -7,6 +7,10 @@
 #include "MagicultHUD.generated.h"
 
 class UMagicultUserWidget;
+class UOverlayWidgetController;
+class UAbilitySystemComponent;
+class UAttributeSet;
+struct FWidgetControllerParams;
 /**
  * 
  */
@@ -16,14 +20,20 @@ class MAGICULT_API AMagicultHUD : public AHUD
 	GENERATED_BODY()
 
 public:
-	virtual void BeginPlay() override;
-
-
 	UPROPERTY()
 	TObjectPtr<UMagicultUserWidget> OverlayWidget;
 
+	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
 
+	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
+	
 private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UMagicultUserWidget> OverlayWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UOverlayWidgetController> OverlayWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UOverlayWidgetController> OverlayWidgetControllerClass;
 };
