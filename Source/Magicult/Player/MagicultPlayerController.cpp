@@ -53,9 +53,10 @@ void AMagicultPlayerController::BeginPlay()
 	check(MagicultContext);
 	
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-	check(Subsystem);
-
-	Subsystem->AddMappingContext(MagicultContext, 0);
+	if (Subsystem)
+	{
+		Subsystem->AddMappingContext(MagicultContext, 0);
+	}
 
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Default;

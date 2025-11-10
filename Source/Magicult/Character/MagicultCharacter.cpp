@@ -7,8 +7,9 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemComponent.h"
-
 #include "Magicult/Player/MagicultPlayerState.h"
+#include "Magicult/UI/HUD/MagicultHUD.h"
+
 
 AMagicultCharacter::AMagicultCharacter()
 {
@@ -49,4 +50,13 @@ void AMagicultCharacter::InitAbilityActorInfo()
 	MagicultPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(MagicultPlayerState, this);
 	AbilitySystemComponent = MagicultPlayerState->GetAbilitySystemComponent();
 	AttributeSet = MagicultPlayerState->GetAttributeSet();
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (AMagicultHUD* HUD = PC->GetHUD<AMagicultHUD>())
+		{
+			HUD->InitOverlay(PC, MagicultPlayerState, AbilitySystemComponent, AttributeSet);
+		}
+	}
+	
 }
