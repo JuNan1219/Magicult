@@ -32,6 +32,6 @@ void AMagicultHUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbility
 	UOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
 
 	OverlayWidget->SetWidgetController(OverlayWidgetController);
-
+	WidgetController->BroadcastInitialValues();
 	Widget->AddToViewport();
 }

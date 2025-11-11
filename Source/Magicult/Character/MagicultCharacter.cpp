@@ -51,11 +51,11 @@ void AMagicultCharacter::InitAbilityActorInfo()
 	AbilitySystemComponent = MagicultPlayerState->GetAbilitySystemComponent();
 	AttributeSet = MagicultPlayerState->GetAttributeSet();
 
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
-		if (AMagicultHUD* HUD = PC->GetHUD<AMagicultHUD>())
+		if (AMagicultHUD* HUD = PlayerController->GetHUD<AMagicultHUD>())
 		{
-			HUD->InitOverlay(PC, MagicultPlayerState, AbilitySystemComponent, AttributeSet);
+			HUD->InitOverlay(PlayerController, MagicultPlayerState, AbilitySystemComponent, AttributeSet);
 		}
 	}
 	

@@ -12,3 +12,8 @@ void UMagicultWidgetController::SetWidgetControllerParams(const FWidgetControlle
 
 
 }
+
+void UMagicultWidgetController::BroadcastInitialValues()
+{
+
+}
