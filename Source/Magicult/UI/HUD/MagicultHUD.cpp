@@ -14,6 +14,7 @@ UOverlayWidgetController* AMagicultHUD::GetOverlayWidgetController(const FWidget
 	{
 		OverlayWidgetController = NewObject<UOverlayWidgetController>(this, OverlayWidgetControllerClass);
 		OverlayWidgetController->SetWidgetControllerParams(WCParams);
+		OverlayWidgetController->BindCallbacksToDependecies();
 
 		return OverlayWidgetController;
 	}

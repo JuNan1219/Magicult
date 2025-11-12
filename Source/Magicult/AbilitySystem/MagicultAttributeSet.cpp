@@ -7,6 +7,7 @@
 
 UMagicultAttributeSet::UMagicultAttributeSet()
 {
+	InitMaxHealth(100.f);
 	InitHealth(100.f);
 }
 

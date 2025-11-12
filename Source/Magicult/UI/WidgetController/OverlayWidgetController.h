@@ -7,10 +7,10 @@
 #include "OverlayWidgetController.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedSignature, float, NewHealth);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChangedSignature, float, NewMaxHealth);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnManaChangedSignature, float, NewMana);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxManaChangedSignature, float, NewMaxMana);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFloatChangedSignature, float, NewFloat);
+
+struct FOnAttributeChangeData;
+
 /**
  * 
  */
@@ -20,10 +20,16 @@ class MAGICULT_API UOverlayWidgetController : public UMagicultWidgetController
 	GENERATED_BODY()
 public:
 	virtual void BroadcastInitialValues() override;
+	virtual void BindCallbacksToDependecies() override;
 
 	UPROPERTY(BlueprintAssignable, category = "GAS")
-	FOnHealthChangedSignature OnHealthChanged;
+	FOnFloatChangedSignature OnHealthChanged;
 
 	UPROPERTY(BlueprintAssignable, category = "GAS")
-	FOnMaxHealthChangedSignature OnMaxHealthChanged;
+	FOnFloatChangedSignature OnMaxHealthChanged;
+
+protected:
+	void HealthChanged(const FOnAttributeChangeData& Data) const;
+	void MaxHealthChanged(const FOnAttributeChangeData& Data) const;
+	
 };
