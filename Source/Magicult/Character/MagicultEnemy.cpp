@@ -17,5 +17,12 @@ AMagicultEnemy::AMagicultEnemy()
 void AMagicultEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InitAbilityActorInfo();
+}
+
+void AMagicultEnemy::InitAbilityActorInfo()
+{
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	Cast<UMagicultAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
 }

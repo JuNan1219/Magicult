@@ -28,8 +28,15 @@ public:
 	UPROPERTY(BlueprintAssignable, category = "GAS")
 	FOnFloatChangedSignature OnMaxHealthChanged;
 
+	UPROPERTY(BlueprintAssignable, category = "GAS")
+	FOnFloatChangedSignature OnManaChanged;
+
+	UPROPERTY(BlueprintAssignable, category = "GAS")
+	FOnFloatChangedSignature OnMaxManaChanged;
 protected:
 	void HealthChanged(const FOnAttributeChangeData& Data) const;
 	void MaxHealthChanged(const FOnAttributeChangeData& Data) const;
 	
+	void ManaChanged(const FOnAttributeChangeData& Data) const;
+	void MaxManaChanged(const FOnAttributeChangeData& Data) const;
 };

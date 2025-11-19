@@ -6,9 +6,10 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AbilitySystemComponent.h"
+
 #include "Magicult/Player/MagicultPlayerState.h"
 #include "Magicult/UI/HUD/MagicultHUD.h"
+#include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 
 
 AMagicultCharacter::AMagicultCharacter()
@@ -33,6 +34,7 @@ void AMagicultCharacter::PossessedBy(AController* NewController)
 
 	// ¼­¹ö : Init ability actor info
 	InitAbilityActorInfo();
+	AddCharacterAbilities();
 }
 
 void AMagicultCharacter::OnRep_PlayerState()
@@ -48,6 +50,7 @@ void AMagicultCharacter::InitAbilityActorInfo()
 	AMagicultPlayerState* MagicultPlayerState = GetPlayerState<AMagicultPlayerState>();
 	check(MagicultPlayerState);
 	MagicultPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(MagicultPlayerState, this);
+	Cast<UMagicultAbilitySystemComponent>(MagicultPlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
 	AbilitySystemComponent = MagicultPlayerState->GetAbilitySystemComponent();
 	AttributeSet = MagicultPlayerState->GetAttributeSet();
 
@@ -58,5 +61,5 @@ void AMagicultCharacter::InitAbilityActorInfo()
 			HUD->InitOverlay(PlayerController, MagicultPlayerState, AbilitySystemComponent, AttributeSet);
 		}
 	}
-	
+	InitializeDefaultAttributes();
 }
