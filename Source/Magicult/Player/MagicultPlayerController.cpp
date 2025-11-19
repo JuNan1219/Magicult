@@ -4,8 +4,9 @@
 #include "MagicultPlayerController.h"
 
 #include "EnhancedInputSubsystems.h"
-#include "EnhancedInputComponent.h"
 #include "AbilitySystemComponent.h"
+#include "Magicult/Input/MagicultInputComponent.h"
+
 
 
 AMagicultPlayerController::AMagicultPlayerController()
@@ -46,6 +47,21 @@ void AMagicultPlayerController::CursorTrace()
 
 }
 
+void AMagicultPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, *InputTag.ToString());
+}
+
+void AMagicultPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Blue, *InputTag.ToString());
+}
+
+void AMagicultPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
+{
+	GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, *InputTag.ToString());
+}
+
 
 void AMagicultPlayerController::BeginPlay()
 {
@@ -71,9 +87,9 @@ void AMagicultPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
-
-	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMagicultPlayerController::Move);
+	UMagicultInputComponent* MagicultInputComponent = CastChecked<UMagicultInputComponent>(InputComponent);
+	MagicultInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMagicultPlayerController::Move);
+	MagicultInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 }
 
 void AMagicultPlayerController::Move(const FInputActionValue& InputActionValue)

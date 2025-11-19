@@ -63,16 +63,14 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FString("")
 	);
 
-
-	// Input Tags
 	GameplayTags.InputTag_LMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.LMB"),
-		TEXT("마우스 왼쪽 버튼")
+		TEXT("마우스 LMB")
 	);
 
 	GameplayTags.InputTag_RMB = UGameplayTagsManager::Get().AddNativeGameplayTag(
-		FName("InputTag.LMB"),
-		TEXT("마우스 오른쪽 버튼")
+		FName("InputTag.RMB"),
+		TEXT("마우스 RMB")
 	);
 
 	GameplayTags.InputTag_0 = UGameplayTagsManager::Get().AddNativeGameplayTag(
@@ -87,22 +85,21 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 
 	GameplayTags.InputTag_2 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.2"),
-		TEXT("키보드 숫자 1")
+		TEXT("키보드 숫자 2")
 	);
 
 	GameplayTags.InputTag_3 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.3"),
-		TEXT("키보드 숫자 1")
+		TEXT("키보드 숫자 3")
 	);
 
 	GameplayTags.InputTag_4 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.4"),
-		TEXT("키보드 숫자 1")
+		TEXT("키보드 숫자 4")
 	);
 
 	GameplayTags.InputTag_5 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.5"),
-		TEXT("키보드 숫자 1")
+		TEXT("키보드 숫자 5")
 	);
-
 }
