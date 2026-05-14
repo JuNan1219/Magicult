@@ -14,4 +14,6 @@ class MAGICULT_API UMagicultGameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
+public:
+
 };
