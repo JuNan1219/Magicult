@@ -2,19 +2,28 @@
 
 
 #include "MagicultAssetManager.h"
+#include "AbilitySystemGlobals.h"
 #include "MagicultGameplayTags.h"
 
 UMagicultAssetManager& UMagicultAssetManager::Get()
 {
-	check(GEngine);
-	
-	UMagicultAssetManager* MagicultAssetManager = Cast<UMagicultAssetManager>(GEngine->AssetManager);
-	return *MagicultAssetManager;
+    UMagicultAssetManager* Singleton = Cast<UMagicultAssetManager>(GEngine->AssetManager);
+
+    if (Singleton)
+    {
+        return *Singleton;
+    }
+
+    UE_LOG(LogTemp, Fatal, TEXT("Invalid AssetManagerClass in DefaultEngine.ini."));
+
+    return *NewObject<UMagicultAssetManager>();
 }
 
 void UMagicultAssetManager::StartInitialLoading()
 {
 	Super::StartInitialLoading();
-
 	FMagicultGameplayTags::InitializeNativeGameplayTags();
+
+	// This is required to use Target Data!
+	UAbilitySystemGlobals::Get().InitGlobalData();
 }

@@ -1,0 +1,139 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "Magicult/MagicultAbilityTypes.h"
+#include "Magicult/Data/ProjectileTypes.h"
+#include "Magicult/Data/SpellTypes.h"
+#include "Magicult/Interface/ActionSourceInterface.h"
+#include "Magicult/Interface/AttackContextProvider.h"
+#include "Magicult/Interface/CombatRuntimeObject.h"
+#include "Magicult/Component/OverlapTriggerGuardComponent.h"
+#include "MagicultProjectile.generated.h"
+
+class UProjectileMovementComponent;
+class UNiagaraSystem;
+class UNiagaraComponent;
+
+USTRUCT()
+struct FProjectileClientInitData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	bool bValid = false;
+
+	UPROPERTY()
+	FVector LaunchDirection = FVector::ForwardVector;
+
+	UPROPERTY()
+	float InitialSpeed = 0.f;
+
+	UPROPERTY()
+	TObjectPtr<UNiagaraSystem> ProjectileNiagara = nullptr;
+
+	UPROPERTY()
+	FSpellColliderSpec ProjectileCollider;
+
+	UPROPERTY()
+	ESpellCollisionEventPolicy ColliderEventPolicy = ESpellCollisionEventPolicy::None;
+};
+
+UCLASS(Abstract)
+class MAGICULT_API AMagicultProjectile : public AActor, public IActionSourceInterface, public IAttackContextProvider, public ICombatRuntimeObject
+{
+	GENERATED_BODY()
+public:
+	AMagicultProjectile();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void SetProjectileSpawnData(const FSpellContext& InSpellContext, const FResolvedSpellProjectileResult& InResolvedSpellProjectileResult);
+	virtual void InitializeProjectile();
+	virtual UPrimitiveComponent* GetCollider();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UNiagaraComponent> NiagaraComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UOverlapTriggerGuardComponent> OverlapGuard;
+
+	UPROPERTY(Replicated)
+	FSpellContext SpellContext;
+
+	FResolvedSpellProjectileResult ResolvedProjectileResult;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ProjectileClientInitData)
+	FProjectileClientInitData ProjectileClientInitData;
+
+	UFUNCTION()
+	void OnRep_ProjectileClientInitData();
+
+
+
+	UFUNCTION()
+	void OnRep_TriggerActions();
+
+	virtual void ApplyColliderSpec(const FSpellColliderSpec& ColliderSpec);
+
+	/*
+	* Interface
+	*/
+	virtual const TArray<FSpellTriggerActionBinding>& GetTriggerActionBindings() const override;
+
+	virtual FAttackSpec GetAttackSpec() const override;
+	virtual FVector GetActorVelocity() const override;
+
+	virtual void PrepareCleanup_Implementation() override;
+	/*
+	* Interface end
+	*/
+
+	void ProcessOverlapRehit(float DeltaTime);
+protected:
+	virtual void BeginPlay() override;
+
+	virtual void LifeSpanExpired() override;
+	virtual void Destroyed() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FAttackSpec AttackSpec;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
+	float LifeSpan = 3.f;
+
+	UPROPERTY(BlueprintReadOnly)
+	float RehitCooldown = 0.5f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_TriggerActions, BlueprintReadOnly)
+	TArray<FSpellTriggerActionBinding> TriggerActions;
+private:
+	bool bProjectileInitialized = false;
+	bool IsValidImpact(AActor* OtherActor);
+
+	void BindCollisionPolicy(ESpellCollisionEventPolicy Policy);
+	void ConfigureCollisionForPolicy(ESpellCollisionEventPolicy Policy);
+
+	UFUNCTION()
+	void HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEvent);
+
+	UFUNCTION()
+	void HandleHit(
+		UPrimitiveComponent* HitComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		FVector NormalImpulse,
+		const FHitResult& Hit);
+
+	bool bExpired = false;
+	void Expire();
+	virtual void OnExpired();
+
+	void UnbindCollisionEvents();
+
+	UPROPERTY()
+	bool bCleanupPrepared = false;
+};

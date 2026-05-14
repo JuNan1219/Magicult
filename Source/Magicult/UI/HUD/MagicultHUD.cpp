@@ -5,6 +5,7 @@
 
 #include "Magicult/UI/Widget/MagicultUserWidget.h"
 #include "Magicult/UI/WidgetController/OverlayWidgetController.h"
+#include "Magicult/UI/WidgetController/MagicMenuWidgetController.h"
 #include "AbilitySystemComponent.h"
 #include "AttributeSet.h"
 
@@ -14,11 +15,22 @@ UOverlayWidgetController* AMagicultHUD::GetOverlayWidgetController(const FWidget
 	{
 		OverlayWidgetController = NewObject<UOverlayWidgetController>(this, OverlayWidgetControllerClass);
 		OverlayWidgetController->SetWidgetControllerParams(WCParams);
-		OverlayWidgetController->BindCallbacksToDependecies();
+		OverlayWidgetController->BindCallbacksToDependencies();
 
 		return OverlayWidgetController;
 	}
 	return OverlayWidgetController;
+}
+
+UMagicMenuWidgetController* AMagicultHUD::GetMagicMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (MagicMenuWidgetController == nullptr)
+	{
+		MagicMenuWidgetController = NewObject<UMagicMenuWidgetController>(this, MagicMenuWidgetControllerClass);
+		MagicMenuWidgetController->SetWidgetControllerParams(WCParams);
+		MagicMenuWidgetController->BindCallbacksToDependencies();
+	}
+	return MagicMenuWidgetController;
 }
 
 void AMagicultHUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)

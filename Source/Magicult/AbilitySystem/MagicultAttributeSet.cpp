@@ -7,6 +7,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Magicult/Interface/CombatInterface.h"
 
 UMagicultAttributeSet::UMagicultAttributeSet()
 {
@@ -17,22 +18,29 @@ void UMagicultAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	// Vital Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, Mana, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxMana, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, MaxSpeed, COND_None, REPNOTIFY_Always);
 
 	// Affinity Attribute
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, RockAffinity, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, FlameAffinity, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, IceAffinity, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, WindAffinity, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, LightningAffinity, COND_None, REPNOTIFY_Always);
 
-	// Resistance Attribute = Affinity Attribute¶û °°Àº °ªÀ» °¡Áü
+	// Resistance Attribute = Affinity Attributeëž‘ ê°™ì€ ê°’ì„ ê°€ì§
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, RockResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, FlameResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, IceResistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, WindResistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, LightningResistance, COND_None, REPNOTIFY_Always);
+
+	// ìºë¦­í„°ë³„ Damage ë°°ìˆ˜
+	DOREPLIFETIME_CONDITION_NOTIFY(UMagicultAttributeSet, DamageModifier, COND_None, REPNOTIFY_Always);
 }
 
 void UMagicultAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -40,9 +48,15 @@ void UMagicultAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 	Super::PreAttributeChange(Attribute, NewValue);
 
 }
+
+void UMagicultAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	Super::PostAttributeChange(Attribute, OldValue, NewValue);
+}
+
 void UMagicultAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const
 {
-	// Source = effect »ç¿ëÀÚ, Target = effect Å¸°Ù(ASÀÇ ¼ÒÀ¯ÀÚ)
+	// Source = effect ì‚¬ìš©ìž, Target = effect íƒ€ê²Ÿ(ASì˜ ì†Œìœ ìž)
 	Props.EffectContextHandle = Data.EffectSpec.GetContext();
 	Props.SourceASC = Props.EffectContextHandle.GetOriginalInstigatorAbilitySystemComponent();
 
@@ -78,8 +92,50 @@ void UMagicultAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 	FEffectProperties Props;
 	SetEffectProperties(Data, Props);
 
-}
+	if (Props.TargetCharacter->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(Props.TargetCharacter)) return;
+	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+	}
+	if (Data.EvaluatedData.Attribute == GetManaAttribute())
+	{
+		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+	}
+	if (Data.EvaluatedData.Attribute == GetMaxSpeedAttribute())
+	{
+		SetMaxSpeed(FMath::Max(0.f, GetMaxSpeed()));
+	}
 
+	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+	{
+		HandleIncomingDamage(Props);
+	}
+}
+void UMagicultAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
+{
+	const float LocalIncomingDamage = GetIncomingDamage();
+	SetIncomingDamage(0.f);
+	if (LocalIncomingDamage > 0.f)
+	{
+		const float NewHealth = GetHealth() - LocalIncomingDamage;
+		SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
+
+		const bool bFatal = NewHealth <= 0.f;
+		if (bFatal)
+		{
+			// Die ì²˜ë¦¬
+			ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
+			if (CombatInterface)
+			{
+				CombatInterface->Die();
+			}
+		}
+
+		/*
+		ShowFloatingText(Props, LocalIncomingDamage, bBlock, bCriticalHit);
+		*/
+	}
+}
 void UMagicultAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, Health, OldHealth);
@@ -98,6 +154,11 @@ void UMagicultAttributeSet::OnRep_Mana(const FGameplayAttributeData& OldMana) co
 void UMagicultAttributeSet::OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, MaxMana, OldMaxMana);
+}
+
+void UMagicultAttributeSet::OnRep_MaxSpeed(const FGameplayAttributeData& OldMaxSpeed) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, MaxSpeed, OldMaxSpeed);
 }
 
 void UMagicultAttributeSet::OnRep_RockAffinity(const FGameplayAttributeData& OldRockAffinity) const
@@ -120,6 +181,16 @@ void UMagicultAttributeSet::OnRep_WindAffinity(const FGameplayAttributeData& Old
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, WindAffinity, OldWindAffinity);
 }
 
+void UMagicultAttributeSet::OnRep_LightningAffinity(const FGameplayAttributeData& OldLightningAffinity) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, LightningAffinity, OldLightningAffinity);
+}
+
+void UMagicultAttributeSet::OnRep_DamageModifier(const FGameplayAttributeData& OldDamageModifier) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, DamageModifier, OldDamageModifier);
+}
+
 void UMagicultAttributeSet::OnRep_RockResistance(const FGameplayAttributeData& OldRockResistance) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, RockResistance, OldRockResistance);
@@ -138,4 +209,9 @@ void UMagicultAttributeSet::OnRep_IceResistance(const FGameplayAttributeData& Ol
 void UMagicultAttributeSet::OnRep_WindResistance(const FGameplayAttributeData& OldWindResistance) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, WindResistance, OldWindResistance);
+}
+
+void UMagicultAttributeSet::OnRep_LightningResistance(const FGameplayAttributeData& OldLightningResistance) const
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UMagicultAttributeSet, LightningResistance, OldLightningResistance);
 }

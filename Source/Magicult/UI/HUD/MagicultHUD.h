@@ -8,6 +8,7 @@
 
 class UMagicultUserWidget;
 class UOverlayWidgetController;
+class UMagicMenuWidgetController;
 class UAbilitySystemComponent;
 class UAttributeSet;
 struct FWidgetControllerParams;
@@ -20,14 +21,17 @@ class MAGICULT_API AMagicultHUD : public AHUD
 	GENERATED_BODY()
 
 public:
+	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
+	UMagicMenuWidgetController* GetMagicMenuWidgetController(const FWidgetControllerParams& WCParams);
+
+	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleMagicMenu();
+private:
 	UPROPERTY()
 	TObjectPtr<UMagicultUserWidget> OverlayWidget;
 
-	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
-
-	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
-	
-private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UMagicultUserWidget> OverlayWidgetClass;
 
@@ -36,4 +40,10 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UOverlayWidgetController> OverlayWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UMagicMenuWidgetController> MagicMenuWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UMagicMenuWidgetController> MagicMenuWidgetControllerClass;
 };

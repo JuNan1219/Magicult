@@ -6,11 +6,10 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-
 #include "Magicult/Player/MagicultPlayerState.h"
 #include "Magicult/UI/HUD/MagicultHUD.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
-
+#include "Magicult/MagicultGameplayTags.h"
 
 AMagicultCharacter::AMagicultCharacter()
 {
@@ -32,7 +31,7 @@ void AMagicultCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// º≠πˆ : Init ability actor info
+	// ÏÑúÎ≤Ñ : Init ability actor info
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
 }
@@ -41,8 +40,35 @@ void AMagicultCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	// ≈¨∂Û¿Ãæ∆Æ : Init ability actor info
+	// ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏ : Init ability actor info
 	InitAbilityActorInfo();
+}
+
+int32 AMagicultCharacter::GetPlayerLevel_Implementation()
+{
+	const AMagicultPlayerState* MagicultPlayerState = GetPlayerState<AMagicultPlayerState>();
+	check(MagicultPlayerState);
+	return MagicultPlayerState->GetPlayerLevel();
+}
+
+FName AMagicultCharacter::GetDefaultKnockbackBone() const
+{
+	return TEXT("Head_01");
+}
+
+void AMagicultCharacter::Die()
+{
+	Super::Die();
+
+	/*FTimerDelegate DeathTimerDelegate;
+	DeathTimerDelegate.BindLambda([this]()
+		{
+			AMagicultGameModeBase* MagicultGM = Cast<AMagicultGameModeBase>(UGameplayStatics::GetGameMode(this));
+			if (MagicultGM)
+			{
+				MagicultGM->PlayerDied(this);
+			}
+		});*/
 }
 
 void AMagicultCharacter::InitAbilityActorInfo()
@@ -62,4 +88,14 @@ void AMagicultCharacter::InitAbilityActorInfo()
 		}
 	}
 	InitializeDefaultAttributes();
+
+	Super::InitAbilityActorInfo();
+}
+
+void AMagicultCharacter::InitializeDefaultAttributes() const
+{
+	if (AMagicultPlayerState* MagicultPlayerState = GetPlayerState<AMagicultPlayerState>())
+	{
+		MagicultPlayerState->InitializeStartupData();
+	}
 }

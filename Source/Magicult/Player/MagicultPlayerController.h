@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class UMagicultInputConfig;
+class UMagicultAbilitySystemComponent;
 
 /**
  * 
@@ -26,6 +27,13 @@ public:
 
 	void CursorDirection();
 
+	UFUNCTION(BlueprintCallable)
+	void AddMagicDetailInputContext();
+	UFUNCTION(BlueprintCallable)
+	void RemoveMagicDetailInputContext();
+
+	UPROPERTY(EditAnywhere)
+	float RotationSpeed = 90.f;
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -35,9 +43,21 @@ private:
 	TObjectPtr<UInputMappingContext> MagicultContext;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> MagicDetailContext;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> RotationAction;
+
 	void Move(const FInputActionValue& InputActionValue);
+	void Rotation(const FInputActionValue& InputActionValue);
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MenuAction;
+
+	void HandleMenuInput(const FInputActionValue& InputActionValue);
 
 	void CursorTrace();
 
@@ -49,4 +69,14 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UMagicultInputConfig> InputConfig;
+
+	UPROPERTY()
+	TWeakObjectPtr<UMagicultAbilitySystemComponent> MagicultAbilitySystemComponent;
+
+	UMagicultAbilitySystemComponent* GetASC();
+
+	UFUNCTION(Server, Unreliable)
+	void ServerSetFacingYaw(float Yaw);
+
+	float LastSentYaw = 0.f;
 };

@@ -13,6 +13,7 @@
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
+// ë©¤ë²„ ë³€ìˆ˜ë¡œ ì´ ë³€ìˆ˜ë¥¼ ì‚¬ìš©í•˜ì§€ ë§ˆì‹œìš”. Raw pointer GC ìœ„í—˜ ìˆìŒ
 USTRUCT()
 struct FEffectProperties
 {
@@ -56,10 +57,11 @@ public:
 	UMagicultAttributeSet();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// ·Î±× ¿ë
+	// ë¡œê·¸ ìš©
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
-	// Å¬·¥ÇÁ µîÀ» »ç¿ëÇÏ´Â ÇÔ¼ö, ¸¹Àº °÷¿¡ Á¢±ÙÇÒ ¼ö ÀÖ´Â °­·ÂÇÑ ÇÔ¼ö
+	// í´ë¨í”„ ë“±ì„ ì‚¬ìš©í•˜ëŠ” í•¨ìˆ˜, ë§ì€ ê³³ì— ì ‘ê·¼í•  ìˆ˜ ìˆëŠ” ê°•ë ¥í•œ í•¨ìˆ˜
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	UPROPERTY(BlueprintReadOnly ,ReplicatedUsing = OnRep_Health, Category = "Attributes")
@@ -90,6 +92,24 @@ public:
 	UFUNCTION()
 	void OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana) const;
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxSpeed, Category = "Attributes")
+	FGameplayAttributeData MaxSpeed;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, MaxSpeed)
+
+	UFUNCTION()
+	void OnRep_MaxSpeed(const FGameplayAttributeData& OldMaxSpeed) const;
+
+	/*
+	 * Meta Attributes
+	 */
+
+	UPROPERTY()
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, IncomingDamage);
+
+	/*
+	 * Meta Attributes End
+	 */
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_RockAffinity, Category = "Primary Attributes")
 	FGameplayAttributeData RockAffinity;
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, RockAffinity)
@@ -106,6 +126,14 @@ public:
 	FGameplayAttributeData WindAffinity;
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, WindAffinity)
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_LightningAffinity, Category = "Primary Attributes")
+	FGameplayAttributeData LightningAffinity;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, LightningAffinity)
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_DamageModifier, Category = "Primary Attributes")
+	FGameplayAttributeData DamageModifier;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, DamageModifier)
+
 	UFUNCTION()
 	void OnRep_RockAffinity(const FGameplayAttributeData& OldRockAffinity) const;
 
@@ -117,6 +145,12 @@ public:
 
 	UFUNCTION()
 	void OnRep_WindAffinity(const FGameplayAttributeData& OldWindAffinity) const;
+
+	UFUNCTION()
+	void OnRep_LightningAffinity(const FGameplayAttributeData& OldLightningAffinity) const;
+
+	UFUNCTION()
+	void OnRep_DamageModifier(const FGameplayAttributeData& OldDamageModifier) const;
 
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_RockResistance, Category = "Secondary Attributes")
@@ -135,6 +169,10 @@ public:
 	FGameplayAttributeData WindResistance;
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, WindResistance);
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_LightningResistance, Category = "Secondary Attributes")
+	FGameplayAttributeData LightningResistance;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, LightningResistance);
+
 	UFUNCTION()
 	void OnRep_RockResistance(const FGameplayAttributeData& OldRockResistance) const;
 
@@ -147,7 +185,11 @@ public:
 	UFUNCTION()
 	void OnRep_WindResistance(const FGameplayAttributeData& OldWindResistance) const;
 
+	UFUNCTION()
+	void OnRep_LightningResistance(const FGameplayAttributeData& OldLightningResistance) const;
 
 private:
+	void HandleIncomingDamage(const FEffectProperties& Props);
 	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;
+
 };
