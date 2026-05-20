@@ -34,4 +34,8 @@ public:
 	void OnLobbyPlayerListChanged();
 
 	virtual void OnLobbyPlayerListChanged_Implementation();
+
+private:
+	UFUNCTION()
+	void OnStartSessionComplete(bool bWasSuccessful);
 };

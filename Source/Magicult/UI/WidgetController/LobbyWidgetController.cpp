@@ -26,8 +26,10 @@ void ULobbyWidgetController::LeaveSession()
 {
 	if (IsLocalPlayerHost() && MultiplayerSessionsSubsystem)
 	{
-		// DestroySession → 완료 델리게이트에서 OpenLevel
-		MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.AddDynamic(this, &ThisClass::OnLeaveComplete);
+		if (!MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.IsAlreadyBound(this, &ThisClass::OnLeaveComplete))
+		{
+			MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.AddDynamic(this, &ThisClass::OnLeaveComplete);
+		}
 		MultiplayerSessionsSubsystem->DestroySession();
 	}
 	else
@@ -38,6 +40,11 @@ void ULobbyWidgetController::LeaveSession()
 
 void ULobbyWidgetController::OnLeaveComplete(bool bWasSuccessful)
 {
+	// GameInstanceSubsystem은 레벨 전환 후에도 살아있으므로 바인딩을 직접 제거해야 누적 호출을 막을 수 있음
+	if (MultiplayerSessionsSubsystem)
+	{
+		MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.RemoveDynamic(this, &ThisClass::OnLeaveComplete);
+	}
 	PlayerController->ClientTravel("/Game/Level/MainMenuMap", TRAVEL_Absolute);
 }
 
@@ -68,6 +75,8 @@ void ULobbyWidgetController::HandleReadyStateChanged()
 TArray<AMagicultLobbyPlayerState*> ULobbyWidgetController::GetLobbyPlayers()
 {
 	TArray<AMagicultLobbyPlayerState*> MagicultLobbyPlayers;
+
+	if (!LobbyGameState) return MagicultLobbyPlayers;
 
 	for (auto& PlayerState : LobbyGameState->PlayerArray)
 	{

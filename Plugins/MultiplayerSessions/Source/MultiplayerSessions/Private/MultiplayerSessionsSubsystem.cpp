@@ -44,11 +44,11 @@ IOnlineSessionPtr UMultiplayerSessionsSubsystem::GetSessionInterfaceSafe() const
 
 void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnetcions, FString MatchType)
 {
-	if (!GetSessionInterfaceSafe())
+	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
+	if (!SessionInterface)
 	{
 		return;
 	}
-	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
 	auto ExistringSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	if (ExistringSession != nullptr)
 	{
@@ -57,6 +57,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnetcions, FS
 		LastMatchType = MatchType;
 
 		DestroySession();
+		return;
 	}
 
 	// 온라인세션인터페이스 델리게이트 목록에 추가
@@ -76,20 +77,21 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnetcions, FS
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *LastSessionSettings))
 	{
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
-		
-		// 커스텀 델리게이트를 브로드캐스트
-		MultiplayerOnCreateSessionComplete.Broadcast(false);
+		if (CreateSessionCompleteDelegateHandle.IsValid())
+		{
+			SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+			MultiplayerOnCreateSessionComplete.Broadcast(false);
+		}
 	}
 }
 
 void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSerachResults)
 {
-	if (!GetSessionInterfaceSafe())
+	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
+	if (!SessionInterface)
 	{
 		return;
 	}
-	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
 	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
 
 	LastSessionSearch = MakeShareable(new FOnlineSessionSearch());
@@ -100,46 +102,60 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSerachResults)
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), LastSessionSearch.ToSharedRef()))
 	{
-		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
-
-		// 커스텀 델리게이트를 브로드캐스트
-		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
+		if (FindSessionsCompleteDelegateHandle.IsValid())
+		{
+			SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+			MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
+		}
 	}
 }
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
 {
-	if (!GetSessionInterfaceSafe())
+	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
+	if (!SessionInterface)
 	{
 		MultiplayerOnJoinSessionComplete.Broadcast(EOnJoinSessionCompleteResult::UnknownError);
 		return;
 	}
-	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
 	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult))
 	{
-		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
-
-		MultiplayerOnJoinSessionComplete.Broadcast(EOnJoinSessionCompleteResult::UnknownError);
+		if (JoinSessionCompleteDelegateHandle.IsValid())
+		{
+			SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
+			MultiplayerOnJoinSessionComplete.Broadcast(EOnJoinSessionCompleteResult::UnknownError);
+		}
 	}
 }
 
 void UMultiplayerSessionsSubsystem::DestroySession()
 {
-	if (!GetSessionInterfaceSafe())
+	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
+	if (!SessionInterface)
 	{
 		MultiplayerOnDestroySessionComplete.Broadcast(false);
 		return;
 	}
-	IOnlineSessionPtr SessionInterface = GetSessionInterfaceSafe();
+
+	// 이미 진행 중인 Destroy 요청이 있으면 핸들이 누적되어 콜백이 두 번 발화되므로 먼저 클리어
+	if (DestroySessionCompleteDelegateHandle.IsValid())
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+	}
 	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
 
 	if (!SessionInterface->DestroySession(NAME_GameSession))
 	{
-		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-		MultiplayerOnDestroySessionComplete.Broadcast(false);
+		// 일부 구현체는 false 반환 전에 콜백을 동기 호출하므로
+		// 핸들이 이미 클리어된 경우(= 콜백이 이미 발화한 경우)에는 중복 브로드캐스트를 막음
+		if (DestroySessionCompleteDelegateHandle.IsValid())
+		{
+			SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+			MultiplayerOnDestroySessionComplete.Broadcast(false);
+		}
 	}
 }
 
@@ -156,8 +172,11 @@ void UMultiplayerSessionsSubsystem::StartSession()
 
 	if (!SessionInterface->StartSession(NAME_GameSession))
 	{
-		SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
-		MultiplayerOnStartSessionComplete.Broadcast(false);
+		if (StartSessionCompleteDelegateHandle.IsValid())
+		{
+			SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
+			MultiplayerOnStartSessionComplete.Broadcast(false);
+		}
 	}
 }
 
