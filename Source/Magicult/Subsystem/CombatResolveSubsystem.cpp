@@ -152,6 +152,31 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 		Resolved.ProjectileBaseClass = ProjectileClass->ProjectileClass;
 	}
 
+	// ----------------------------------------------------------------
+	// 5) EffectTags → Modifier 적용
+	// ----------------------------------------------------------------
+	TArray<FSpellModifierConfig> ModifierConfigs;
+	UMagicultAbilitySystemLibrary::GetModifierConfigs(this, ModifierConfigs);
+
+	for (const auto& [Tag, Level] : InSpellState.EffectTags)
+	{
+		const FSpellModifierConfig* Config = ModifierConfigs.FindByPredicate(
+			[&](const FSpellModifierConfig& C) { return C.ModifierTag == Tag; });
+		if (!Config) continue;
+
+		Resolved.DamageModifier *= Config->DamageMultiplier;
+		Resolved.SizeScale *= Config->SizeScale;
+		Resolved.GravityScale = FMath::Min(Resolved.GravityScale, Config->GravityScaleOverride);
+		Resolved.LifeSpanMultiplier *= Config->LifeSpanMultiplier;
+		if (Config->bFriendlyFire) Resolved.bFriendlyFire = true;
+		if (Config->bTracking && !Resolved.bTracking)
+		{
+			Resolved.bTracking = true;
+			Resolved.TrackingSearchRadius = Config->TrackingSearchRadius;
+			Resolved.HomingAccelerationMagnitude = Config->HomingAccelerationMagnitude;
+		}
+	}
+
 	return Resolved;
 }
 

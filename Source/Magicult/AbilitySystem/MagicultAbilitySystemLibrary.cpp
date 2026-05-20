@@ -2,6 +2,7 @@
 
 
 #include "MagicultAbilitySystemLibrary.h"
+#include "Magicult/AbilitySystem/Abilities/MagicultPassiveAbility.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraSystem.h"
 #include "Magicult/Player/MagicultPlayerState.h"
@@ -129,6 +130,25 @@ void UMagicultAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldCon
 			ASC->GiveAbility(AbilitySpec);
 		}
 	}
+
+	for (TSubclassOf<UGameplayAbility> AbilityClass : CharacterClassInfo->CommonPassiveAbilities)
+	{
+		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+		if (Cast<UMagicultPassiveAbility>(AbilitySpec.Ability))
+		{
+			FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(AbilitySpec);
+			ASC->TryActivateAbility(Handle);
+		}
+	}
+	for (TSubclassOf<UGameplayAbility> AbilityClass : DefaultInfo.StartupPassiveAbilities)
+	{
+		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+		if (Cast<UMagicultPassiveAbility>(AbilitySpec.Ability))
+		{
+			FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(AbilitySpec);
+			ASC->TryActivateAbility(Handle);
+		}
+	}
 }
 
 FGameplayEffectContextHandle UMagicultAbilitySystemLibrary::ApplyDamageEffect(const FAttackApplyParams& AttackApplyParams)
@@ -184,10 +204,12 @@ static void FillDamageEffectContext(const FSpellContext& Context, FGameplayEffec
 	{
 		if (const IAttackContextProvider* AttackContextProvider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
 		{
-			MagicultContext->AttackContext.ElementType = AttackContextProvider->GetAttackSpec().ElementTag;
-			MagicultContext->AttackContext.ElementRatio = AttackContextProvider->GetAttackSpec().ElementRatio;
-			MagicultContext->AttackContext.BaseDamage = AttackContextProvider->GetAttackSpec().BaseDamage;
-			MagicultContext->AttackContext.bUseVelocityDamage = !IsRadialDamage && AttackContextProvider->GetAttackSpec().bUseVelocityDamage;
+			const FAttackSpec& AttackSpec = AttackContextProvider->GetAttackSpec();
+			MagicultContext->AttackContext.ElementType = AttackSpec.ElementTag;
+			MagicultContext->AttackContext.ElementRatio = AttackSpec.ElementRatio;
+			MagicultContext->AttackContext.BaseDamage = AttackSpec.BaseDamage;
+			MagicultContext->AttackContext.bUseVelocityDamage = !IsRadialDamage && AttackSpec.bUseVelocityDamage;
+			MagicultContext->AttackContext.DamageModifier = AttackSpec.DamageModifier;
 			MagicultContext->AttackContext.DamageCauserVelocity = AttackContextProvider->GetActorVelocity();
 		}
 	}
@@ -409,6 +431,20 @@ bool UMagicultAbilitySystemLibrary::GetProjectileBaseClass(const UObject* WorldC
 	}
 
 	OutProjectileBaseClasses = ProjectileData->ProjectileBaseClasses;
+	return true;
+}
+
+bool UMagicultAbilitySystemLibrary::GetModifierConfigs(const UObject* WorldContextObject, TArray<FSpellModifierConfig>& OutModifierConfigs)
+{
+	OutModifierConfigs.Reset();
+
+	const UProjectileData* ProjectileData = GetProjectileData(WorldContextObject);
+	if (!IsValid(ProjectileData))
+	{
+		return false;
+	}
+
+	OutModifierConfigs = ProjectileData->ModifierConfigs;
 	return true;
 }
 

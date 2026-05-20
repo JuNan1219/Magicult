@@ -221,6 +221,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 		return ExecuteKnockback(Action.KnockbackSpec, Context);
 	case ESpellActionType::DestroyActor:
 		return ExecuteDestroyActor(Context);
+	case ESpellActionType::Interrupt:
+		return ExecuteInterrupt(Action.InterruptSpec, Context);
 	default:
 		break;
 	}
@@ -466,9 +468,13 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 			continue;
 		}
 
-		// Debuff 식별 태그를 동적으로 부여
 		if (DebuffSpec.DebuffTag.IsValid())
 		{
+			// 기존 동일 디버프 제거 후 갱신
+			FGameplayTagContainer TagsToRemove;
+			TagsToRemove.AddTag(DebuffSpec.DebuffTag);
+			TargetASC->RemoveActiveEffectsWithGrantedTags(TagsToRemove);
+
 			Spec->DynamicGrantedTags.AddTag(DebuffSpec.DebuffTag);
 		}
 
@@ -845,6 +851,14 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 		MoveComp->ApplyRootMotionSource(RMS);
 
+		if (!KnockbackSpec.InterruptSpec.CancelTags.IsEmpty())
+		{
+			FSpellActionSpec InterruptAction;
+			InterruptAction.ActionType = ESpellActionType::Interrupt;
+			InterruptAction.InterruptSpec = KnockbackSpec.InterruptSpec;
+			Result.GeneratedActionRequests.Emplace(InterruptAction, Context);
+		}
+
 		return Result;
 	}
 
@@ -870,6 +884,16 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 	}
 
 	return Result;
+}
+
+FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteInterrupt(
+	const FSpellInterruptActionSpec& InterruptSpec, const FSpellContext& Context)
+{
+	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
+	if (!TargetASC || InterruptSpec.CancelTags.IsEmpty()) return {};
+
+	TargetASC->CancelAbilities(&InterruptSpec.CancelTags);
+	return {};
 }
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteDestroyActor(const FSpellContext& Context)

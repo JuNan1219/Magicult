@@ -3,6 +3,7 @@
 
 #include "MagicultAbilitySystemComponent.h"
 #include "Magicult/AbilitySystem/Abilities/MagicultGameplayAbility.h"
+#include "Magicult/AbilitySystem/Abilities/MagicultPassiveAbility.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Magicult/Data/MagicInfo.h"
 #include "Magicult/MagicultGameplayTags.h"
@@ -29,6 +30,25 @@ void UMagicultAbilitySystemComponent::AddCharacterAbilities(const TArray<TSubcla
 		}
 	}
 	bStartupAbilitiesGiven = true;
+}
+
+void UMagicultAbilitySystemComponent::CancelAbilitiesWithTag(FGameplayTag Tag)
+{
+	FGameplayTagContainer Tags(Tag);
+	CancelAbilities(&Tags);
+}
+
+void UMagicultAbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities)
+{
+	for (const auto AbilityClass : StartupPassiveAbilities)
+	{
+		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
+		if (Cast<UMagicultPassiveAbility>(AbilitySpec.Ability))
+		{
+			FGameplayAbilitySpecHandle Handle = GiveAbility(AbilitySpec);
+			TryActivateAbility(Handle);
+		}
+	}
 }
 
 void UMagicultAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
