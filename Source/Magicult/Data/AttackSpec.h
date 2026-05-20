@@ -20,4 +20,7 @@ struct FAttackSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bUseVelocityDamage = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DamageModifier = 1.0f;
 };

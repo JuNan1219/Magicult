@@ -12,6 +12,7 @@
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/KismetSystemLibrary.h"
 // Sets default values
 AMagicultProjectile::AMagicultProjectile()
 {
@@ -85,6 +86,17 @@ void AMagicultProjectile::SetProjectileSpawnData(const FSpellContext& InSpellCon
 	AttackSpec.ElementTag = Spec.ElementTag;
 	AttackSpec.ElementRatio = Spec.ElementRatio;
 	AttackSpec.bUseVelocityDamage = true;
+	AttackSpec.DamageModifier = Spec.DamageModifier;
+
+	bFriendlyFire = Spec.bFriendlyFire;
+
+	ProjectileClientInitData.SizeScale = Spec.SizeScale;
+	ProjectileClientInitData.GravityScale = Spec.GravityScale;
+	ProjectileClientInitData.LifeSpanMultiplier = Spec.LifeSpanMultiplier;
+	ProjectileClientInitData.bFriendlyFire = Spec.bFriendlyFire;
+	ProjectileClientInitData.bTracking = Spec.bTracking;
+	ProjectileClientInitData.TrackingSearchRadius = Spec.TrackingSearchRadius;
+	ProjectileClientInitData.HomingAccelerationMagnitude = Spec.HomingAccelerationMagnitude;
 
 	TriggerActions = Spec.TriggerActionBindings;
 
@@ -133,7 +145,59 @@ void AMagicultProjectile::InitializeProjectile()
 
 		ProjectileMovement->InitialSpeed = ProjectileClientInitData.InitialSpeed;
 		ProjectileMovement->Velocity = LaunchDirection * ProjectileClientInitData.InitialSpeed;
+		ProjectileMovement->ProjectileGravityScale = ProjectileClientInitData.GravityScale;
 		ProjectileMovement->Activate(true);
+	}
+
+	if (!FMath::IsNearlyEqual(ProjectileClientInitData.SizeScale, 1.0f))
+	{
+		SetActorScale3D(GetActorScale3D() * ProjectileClientInitData.SizeScale);
+	}
+
+	if (!FMath::IsNearlyEqual(ProjectileClientInitData.LifeSpanMultiplier, 1.0f))
+	{
+		LifeSpan *= ProjectileClientInitData.LifeSpanMultiplier;
+		SetLifeSpan(LifeSpan);
+	}
+
+	bFriendlyFire = ProjectileClientInitData.bFriendlyFire;
+
+	if (ProjectileClientInitData.bTracking && HasAuthority() && ProjectileMovement)
+	{
+		TArray<AActor*> OverlappingActors;
+		UKismetSystemLibrary::SphereOverlapActors(
+			this,
+			GetActorLocation(),
+			ProjectileClientInitData.TrackingSearchRadius,
+			TArray<TEnumAsByte<EObjectTypeQuery>>(),
+			nullptr,
+			TArray<AActor*>{ GetOwner() },
+			OverlappingActors
+		);
+
+		float MinDist = MAX_FLT;
+		AActor* NearestEnemy = nullptr;
+		for (AActor* Actor : OverlappingActors)
+		{
+			AActor* SourceAvatar = SpellContext.SourceAbilitySystemComponent.IsValid()
+				? SpellContext.SourceAbilitySystemComponent->GetAvatarActor()
+				: nullptr;
+			if (!UMagicultAbilitySystemLibrary::IsNotFriend(SourceAvatar, Actor)) continue;
+
+			const float Dist = FVector::Dist(GetActorLocation(), Actor->GetActorLocation());
+			if (Dist < MinDist)
+			{
+				MinDist = Dist;
+				NearestEnemy = Actor;
+			}
+		}
+
+		if (NearestEnemy)
+		{
+			ProjectileMovement->HomingTargetComponent = NearestEnemy->GetRootComponent();
+			ProjectileMovement->HomingAccelerationMagnitude = ProjectileClientInitData.HomingAccelerationMagnitude;
+			ProjectileMovement->bIsHomingProjectile = true;
+		}
 	}
 
 	BindCollisionPolicy(ProjectileClientInitData.ColliderEventPolicy);
@@ -211,8 +275,7 @@ bool AMagicultProjectile::IsValidImpact(AActor* OtherActor)
 	if (SpellContext.SourceAbilitySystemComponent == nullptr) return false;
 	AActor* SourceAvatarActor = SpellContext.SourceAbilitySystemComponent->GetAvatarActor();
 	if (SourceAvatarActor == OtherActor) return false;
-	//TODO : 옵션이 있을때만
-	//if (!UMagicultAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor)) return false;
+	if (!bFriendlyFire && !UMagicultAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor)) return false;
 
 	return true;
 }

@@ -39,6 +39,27 @@ struct FProjectileClientInitData
 
 	UPROPERTY()
 	ESpellCollisionEventPolicy ColliderEventPolicy = ESpellCollisionEventPolicy::None;
+
+	UPROPERTY()
+	float SizeScale = 1.0f;
+
+	UPROPERTY()
+	float GravityScale = 1.0f;
+
+	UPROPERTY()
+	float LifeSpanMultiplier = 1.0f;
+
+	UPROPERTY()
+	bool bFriendlyFire = false;
+
+	UPROPERTY()
+	bool bTracking = false;
+
+	UPROPERTY()
+	float TrackingSearchRadius = 1000.0f;
+
+	UPROPERTY()
+	float HomingAccelerationMagnitude = 3000.0f;
 };
 
 UCLASS(Abstract)
@@ -107,6 +128,8 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	float RehitCooldown = 0.5f;
+
+	bool bFriendlyFire = false;
 
 	UPROPERTY(ReplicatedUsing = OnRep_TriggerActions, BlueprintReadOnly)
 	TArray<FSpellTriggerActionBinding> TriggerActions;

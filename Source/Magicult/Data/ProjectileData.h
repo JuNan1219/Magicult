@@ -24,4 +24,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TArray<FSpellProjectileClassEntry> ProjectileBaseClasses;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ModifierData")
+	TArray<FSpellModifierConfig> ModifierConfigs;
 };

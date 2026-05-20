@@ -15,5 +15,6 @@ class MAGICULT_API UMagicultGameplayAbility : public UGameplayAbility
 	GENERATED_BODY()
 	
 public:
-
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void CancelAbilitiesWithTag(FGameplayTag Tag);
 };

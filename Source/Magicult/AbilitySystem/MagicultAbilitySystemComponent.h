@@ -22,7 +22,10 @@ public:
 	FAbilityStatusChanged AbilityStatusChanged;
 
 	void AddCharacterAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities);
-	//void AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
+	void AddCharacterPassiveAbilities(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void CancelAbilitiesWithTag(FGameplayTag Tag);
 	
 
 	bool bStartupAbilitiesGiven = false;
