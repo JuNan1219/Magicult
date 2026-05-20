@@ -72,6 +72,10 @@ private:
 	FSpellActionExecutionResult ExecuteDestroyActor(
 		const FSpellContext& Context);
 
+	FSpellActionExecutionResult ExecuteInterrupt(
+		const FSpellInterruptActionSpec& InterruptSpec,
+		const FSpellContext& Context);
+
 	UPROPERTY(Transient)
 	mutable TObjectPtr<UActionExecutionConfig> ActionExecutionConfig;
 };

@@ -117,6 +117,9 @@ public:
 	FGameplayTag Magic_Effect_SuperArmor;
 	FGameplayTag Magic_Effect_DefaultDirection;
 	FGameplayTag Magic_Effect_DefaultSpeed;
+	FGameplayTag Magic_Effect_Concentration;
+	FGameplayTag Magic_Effect_DamageImmunity;
+	FGameplayTag Magic_Effect_KnockbackImmunity;
 
 	// 상태
 	FGameplayTag Magic_Status_Locked;

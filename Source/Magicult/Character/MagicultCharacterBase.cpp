@@ -69,7 +69,7 @@ void AMagicultCharacterBase::AddCharacterAbilities()
 	if (!HasAuthority()) return;
 
 	MagicultASC->AddCharacterAbilities(StartupAbilities);
-	//MagicultASC->AddCharacterPassiveAbilities(StartupPassiveAbilities);
+	MagicultASC->AddCharacterPassiveAbilities(StartupPassiveAbilities);
 }
 
 void AMagicultCharacterBase::InitAbilityActorInfo()

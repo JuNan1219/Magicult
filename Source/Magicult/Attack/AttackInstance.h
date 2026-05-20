@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "GameplayTagContainer.h"
-#include "TimerManager.h"
 #include "Magicult/Data/SpellTypes.h"
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/Interface/ActionSourceInterface.h"
@@ -20,7 +19,6 @@ enum class EAttackInstanceFinishReason : uint8
 {
 	None,
 	Normal,
-	Timeout,
 	Cancelled
 };
 
@@ -54,12 +52,12 @@ public:
 	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag);
 
 	FOnAttackInstanceFinished OnFinished;
-	
+
 	virtual const TArray<FSpellTriggerActionBinding>& GetTriggerActionBindings() const override;
 
 	EAttackInstanceFinishReason GetFinishReason() const { return FinishReason; }
 	/*
-	* AttackContextProvider Interface 
+	* AttackContextProvider Interface
 	*/
 	virtual FAttackSpec GetAttackSpec() const override;
 	virtual FVector GetActorVelocity() const override;
@@ -85,9 +83,6 @@ protected:
 
 	virtual UWorld* GetWorld() const override;
 
-	void StartAutoFinishTimer();
-	void ClearAutoFinishTimer();
-	void HandleAutoFinishTimeout();
 	void FinishInternal(EAttackInstanceFinishReason InReason);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -96,7 +91,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	FSpellContext Context;
 
-	// attck 기본값
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FAttackSpec AttackSpec;
 
@@ -105,17 +99,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bFinishing = false;
 
-	// Blueprint에서 설정하는 바인딩 원본
-	UPROPERTY(EditAnywhere, BlueprintReadOnly,Category = "TriggerActionBinding")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "TriggerActionBinding")
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
-
-	UPROPERTY(EditAnywhere, Category = "AttackInstance|Lifetime")
-	bool bUseAutoFinish = true;
-
-	UPROPERTY(EditAnywhere, Category = "AttackInstance|Lifetime", meta = (EditCondition = "bUseAutoFinish", ClampMin = "0.0"))
-	float AutoFinishDelay = 3.0f;
-
-	FTimerHandle AutoFinishTimerHandle;
 
 	EAttackInstanceFinishReason FinishReason = EAttackInstanceFinishReason::None;
 

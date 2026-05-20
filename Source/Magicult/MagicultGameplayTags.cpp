@@ -363,6 +363,21 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		TEXT("")
 	);
 
+	GameplayTags.Magic_Effect_Concentration = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Magic.Effect.Concentration"),
+		TEXT("마법 모드 취소를 방지하는 집중 상태")
+	);
+
+	GameplayTags.Magic_Effect_DamageImmunity = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Magic.Effect.DamageImmunity"),
+		TEXT("데미지 면역 상태")
+	);
+
+	GameplayTags.Magic_Effect_KnockbackImmunity = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Magic.Effect.KnockbackImmunity"),
+		TEXT("넉백 면역 상태")
+	);
+
 	// Magic Status
 
 	GameplayTags.Magic_Status_Locked = UGameplayTagsManager::Get().AddNativeGameplayTag(

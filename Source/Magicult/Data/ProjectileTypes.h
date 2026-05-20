@@ -264,6 +264,39 @@ struct FSpellRuntimeState
 };
 
 USTRUCT(BlueprintType)
+struct FSpellModifierConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	FGameplayTag ModifierTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float DamageMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float SizeScale = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float GravityScaleOverride = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float LifeSpanMultiplier = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	bool bFriendlyFire = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	bool bTracking = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float TrackingSearchRadius = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	float HomingAccelerationMagnitude = 3000.0f;
+};
+
+USTRUCT(BlueprintType)
 struct FResolvedSpellProjectileSpec
 {
 	GENERATED_BODY()
@@ -307,6 +340,30 @@ struct FResolvedSpellProjectileSpec
 
 	UPROPERTY(BlueprintReadOnly, Category = "Resolved", meta = (TitleProperty = "BindingTag"))
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float DamageModifier = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float SizeScale = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float GravityScale = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float LifeSpanMultiplier = 1.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	bool bFriendlyFire = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	bool bTracking = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float TrackingSearchRadius = 1000.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
+	float HomingAccelerationMagnitude = 3000.0f;
 };
 
 USTRUCT(BlueprintType)

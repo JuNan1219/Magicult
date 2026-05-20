@@ -21,6 +21,27 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 {
 	bIsEndingAbility = false;
 
+	if (!TriggerEventData)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	AActor* SourceActor = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+	if (!SourceActor || !SourceActor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	const FAttackDefinition AttackDefinition = GetRandomAttackDefinitionFromArray(
+		ICombatInterface::Execute_GetAttackDefinitions(SourceActor, TriggerEventData->EventTag));
+
+	if (!AttackDefinition.AttackInstanceClass)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
@@ -28,28 +49,6 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 		return;
 	}
 
-	AActor* SourceActor = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
-	if (!SourceActor)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	if (!SourceActor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	const TArray<FAttackDefinition> AttackDefinitions = ICombatInterface::Execute_GetAttackDefinitions(SourceActor, TriggerEventData->EventTag);
-	const FAttackDefinition AttackDefinition = GetRandomAttackDefinitionFromArray(AttackDefinitions);
-
-	if (!AttackDefinition.AttackInstanceClass)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	CurrentAttackInstance = NewObject<UAttackInstance>(this, AttackDefinition.AttackInstanceClass);
 	if (!CurrentAttackInstance)
 	{
@@ -57,59 +56,32 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 		return;
 	}
 
-	CurrentAttackInstance->SetOwnerActor(ActorInfo->AvatarActor.Get());
-
-	FSpellContext SpellContext = UMagicultAbilitySystemLibrary::MakeSpellContext(
-		GetAbilitySystemComponentFromActorInfo(),
-		nullptr,
-		GetAvatarActorFromActorInfo(),
-		nullptr,
-		FHitResult(),
-		false,
-		CurrentAttackInstance
-	);
-
 	CurrentAttackDefinition = AttackDefinition;
-
-	CurrentAttackInstance->Initialize(SpellContext, CurrentAttackDefinition.AttackSpec, CurrentAttackDefinition.bOverrideAttackSpec);
+	CurrentAttackInstance->SetOwnerActor(ActorInfo->AvatarActor.Get());
+	CurrentAttackInstance->Initialize(
+		UMagicultAbilitySystemLibrary::MakeSpellContext(
+			GetAbilitySystemComponentFromActorInfo(), nullptr,
+			GetAvatarActorFromActorInfo(), nullptr,
+			FHitResult(), false, CurrentAttackInstance),
+		CurrentAttackDefinition.AttackSpec,
+		CurrentAttackDefinition.bOverrideAttackSpec);
 	CurrentAttackInstance->SetInstanceConfig(CurrentAttackDefinition.InstanceConfig);
 	if (CurrentAttackDefinition.SocketTag.IsValid())
 		CurrentAttackInstance->SetSocketTag(CurrentAttackDefinition.SocketTag);
 
-	CurrentAttackInstance->OnFinished.AddUObject(this, &ThisClass::HandleAttackInstanceFinished);
-	// 공격 인스턴스는 즉시 실행
-	CurrentAttackInstance->Execute();
-
-	// Notify 이벤트 대기 등록
+	// Task 등록 먼저 — Execute()가 이벤트를 즉시 발행할 수 있으므로 반드시 선행
 	WaitGameplayEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		FMagicultGameplayTags::Get().Notify_Attack,
-		nullptr,
-		false,
-		false
-	);
-
+		this, FMagicultGameplayTags::Get().Notify_Attack, nullptr, false, false);
 	if (WaitGameplayEventTask)
 	{
 		WaitGameplayEventTask->EventReceived.AddDynamic(this, &ThisClass::HandleMontageGameplayEvent);
 		WaitGameplayEventTask->ReadyForActivation();
 	}
-	
+
 	if (AttackDefinition.Montage)
 	{
-		
-
-		// 몽타주 재생
-		PlayMontageAndWaitTask =
-			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-				this,
-				TEXT("AttackMontage"),
-				AttackDefinition.Montage,
-				1.0f,
-				NAME_None,
-				false,
-				1.0f
-			);
+		PlayMontageAndWaitTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, TEXT("AttackMontage"), AttackDefinition.Montage, 1.0f, NAME_None, true, 1.0f);
 		if (!PlayMontageAndWaitTask)
 		{
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -120,6 +92,20 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 		PlayMontageAndWaitTask->OnCancelled.AddDynamic(this, &ThisClass::HandleMontageCancelled);
 		PlayMontageAndWaitTask->ReadyForActivation();
 	}
+	else
+	{
+		// 몽타주 없을 때 타임아웃으로 GA 종료
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				AbilityTimeoutHandle, this,
+				&ThisClass::HandleAbilityTimeout,
+				AbilityTimeout, false);
+		}
+	}
+
+	CurrentAttackInstance->Execute();
+
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
@@ -130,117 +116,70 @@ void UMagicultDamageGameplayAbility::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
+	bIsEndingAbility = true;
 
-	if (PlayMontageAndWaitTask)
-	{
-		PlayMontageAndWaitTask->EndTask();
-		PlayMontageAndWaitTask = nullptr;
-	}
+	if (UWorld* World = GetWorld())
+		World->GetTimerManager().ClearTimer(AbilityTimeoutHandle);
 
+	// 이벤트 수신 즉시 차단
 	if (WaitGameplayEventTask)
 	{
 		WaitGameplayEventTask->EndTask();
 		WaitGameplayEventTask = nullptr;
 	}
 
-	if (CurrentAttackInstance)
-	{
-		CurrentAttackInstance->Cancel();
-		CurrentAttackInstance = nullptr;
-	}
+	CleanupAttackInstance();
+
+	// PlayMontageAndWaitTask는 직접 EndTask하지 않음
+	// Super::EndAbility → EndActiveTasks → OnDestroy(AbilityEnded=true) → StopPlayingMontage
+	PlayMontageAndWaitTask = nullptr;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
+// ---------------------------------------------------------------
+
+void UMagicultDamageGameplayAbility::TerminateAbility(bool bCancelled)
+{
+	if (bIsEndingAbility) return;
+	bIsEndingAbility = true;
+
+	CleanupAttackInstance();
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bCancelled);
+}
+
+void UMagicultDamageGameplayAbility::CleanupAttackInstance()
+{
+	if (!CurrentAttackInstance) return;
+
+	CurrentAttackInstance->Cancel();
+	CurrentAttackInstance = nullptr;
+}
+
+// ---------------------------------------------------------------
+// 핸들러
+// ---------------------------------------------------------------
+
 void UMagicultDamageGameplayAbility::HandleMontageGameplayEvent(FGameplayEventData Payload)
 {
-	if (!CurrentAttackInstance)
-	{
-		return;
-	}
-
-	// Notify로 들어온 정보를 AttackInstance에 전달
-	CurrentAttackInstance->HandleEventTag(Payload.EventTag);
-}
-
-void UMagicultDamageGameplayAbility::HandleAttackInstanceFinished(UAttackInstance* FinishedInstance)
-{
-	if (bIsEndingAbility)
-	{
-		return;
-	}
-
-	if (FinishedInstance != CurrentAttackInstance)
-	{
-		return;
-	}
-
-	bIsEndingAbility = true;
-	CurrentAttackInstance = nullptr;
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-}
-
-void UMagicultDamageGameplayAbility::HandleMontageCompleted()
-{
-	if (bIsEndingAbility)
-	{
-		return;
-	}
-
-	bIsEndingAbility = true;
-
 	if (CurrentAttackInstance)
 	{
-		CurrentAttackInstance->Finish();
-		CurrentAttackInstance = nullptr;
+		CurrentAttackInstance->HandleEventTag(Payload.EventTag);
 	}
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
-void UMagicultDamageGameplayAbility::HandleMontageInterrupted()
-{
-	if (bIsEndingAbility)
-	{
-		return;
-	}
+void UMagicultDamageGameplayAbility::HandleMontageCompleted()   { TerminateAbility(false); }
+void UMagicultDamageGameplayAbility::HandleMontageInterrupted() { TerminateAbility(true);  }
+void UMagicultDamageGameplayAbility::HandleMontageCancelled()   { TerminateAbility(true);  }
+void UMagicultDamageGameplayAbility::HandleAbilityTimeout()     { TerminateAbility(false); }
 
-	bIsEndingAbility = true;
-
-	if (CurrentAttackInstance)
-	{
-		CurrentAttackInstance->Cancel();
-		CurrentAttackInstance = nullptr;
-	}
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-}
-
-void UMagicultDamageGameplayAbility::HandleMontageCancelled()
-{
-	if (bIsEndingAbility)
-	{
-		return;
-	}
-
-	bIsEndingAbility = true;
-
-	if (CurrentAttackInstance)
-	{
-		CurrentAttackInstance->Cancel();
-		CurrentAttackInstance = nullptr;
-	}
-
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-}
+// ---------------------------------------------------------------
 
 FAttackDefinition UMagicultDamageGameplayAbility::GetRandomAttackDefinitionFromArray(const TArray<FAttackDefinition>& AttackDefinitions) const
 {
 	if (AttackDefinitions.Num() > 0)
 	{
-		const int32 Selection = FMath::RandRange(0, AttackDefinitions.Num() - 1);
-		return AttackDefinitions[Selection];
+		return AttackDefinitions[FMath::RandRange(0, AttackDefinitions.Num() - 1)];
 	}
-
 	return FAttackDefinition();
 }
