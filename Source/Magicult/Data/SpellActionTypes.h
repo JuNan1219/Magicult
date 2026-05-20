@@ -25,7 +25,8 @@ enum class ESpellActionType : uint8
 	EmitNiagara,
 	PlayCue,
 	Knockback,
-	DestroyActor
+	DestroyActor,
+	Interrupt
 };
 
 // 필요한 ActionSpec에 변수로 사용
@@ -164,6 +165,15 @@ struct FSpellPlayCueActionSpec
 };
 
 USTRUCT(BlueprintType)
+struct FSpellInterruptActionSpec
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Interrupt")
+	FGameplayTagContainer CancelTags;
+};
+
+USTRUCT(BlueprintType)
 struct FSpellKnockbackActionSpec
 {
 	GENERATED_BODY()
@@ -195,6 +205,10 @@ struct FSpellKnockbackActionSpec
 	// physics simulating primitive면 impulse 사용
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Knockback")
 	bool bAffectPhysicsBodies = true;
+
+	// 넉백 성공 시 자동으로 발동할 인터럽트 (CancelTags가 비어 있으면 스킵)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Knockback")
+	FSpellInterruptActionSpec InterruptSpec;
 };
 
 USTRUCT(BlueprintType)
@@ -267,6 +281,10 @@ struct FSpellActionSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::Knockback", EditConditionHides))
 	FSpellKnockbackActionSpec KnockbackSpec;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
+		meta = (EditCondition = "ActionType == ESpellActionType::Interrupt", EditConditionHides))
+	FSpellInterruptActionSpec InterruptSpec;
 };
 
 USTRUCT(BlueprintType)

@@ -44,7 +44,6 @@ struct FDebuffEffectEntry
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     EDebuffEffectType Type;
 
-    // 기본 정책들이 설정되있는 클래스(스택, Modifier 등)
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<UGameplayEffect> EffectClass;
 

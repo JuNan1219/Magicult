@@ -16,9 +16,9 @@ struct FGameplayEventData;
 
 /**
  * 공격용 GameplayAbility
- * - ActivateAbility 시 AttackInstance를 생성/초기화하고 즉시 Execute
- * - Montage Notify -> GameplayEvent를 WaitGameplayEvent로 받아 AttackInstance에 전달
- * - Montage가 중단되면 AttackInstance를 취소하고 Ability 종료
+ * - GA 생명주기 = 몽타주 생명주기 (몽타주 없으면 AbilityTimeout)
+ * - AttackInstance는 판정 전담, GA 종료를 직접 트리거하지 않음
+ * - Notify_Attack_End → AttackInstance.Finish() (판정 종료), GA/몽타주는 계속
  */
 UCLASS()
 class MAGICULT_API UMagicultDamageGameplayAbility : public UMagicultGameplayAbility
@@ -44,8 +44,6 @@ protected:
 	UFUNCTION()
 	void HandleMontageGameplayEvent(FGameplayEventData Payload);
 
-	void HandleAttackInstanceFinished(UAttackInstance* FinishedInstance);
-
 	UFUNCTION()
 	void HandleMontageCompleted();
 
@@ -55,7 +53,18 @@ protected:
 	UFUNCTION()
 	void HandleMontageCancelled();
 
+	UFUNCTION()
+	void HandleAbilityTimeout();
+
 	FAttackDefinition GetRandomAttackDefinitionFromArray(const TArray<FAttackDefinition>& AttackDefinitions) const;
+
+private:
+	/** 모든 종료 경로의 단일 진입점. 재진입 방어 + AttackInstance 정리 + EndAbility 호출 */
+	void TerminateAbility(bool bCancelled);
+
+	/** AttackInstance Cancel → nullptr */
+	void CleanupAttackInstance();
+
 protected:
 	UPROPERTY()
 	FAttackDefinition CurrentAttackDefinition;
@@ -72,6 +81,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
 	TSubclassOf<UGameplayEffect> DamageGameplayEffect;
 
+	/** 몽타주 없을 때 GA 최대 지속 시간 */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
+	float AbilityTimeout = 5.f;
+
 	UPROPERTY(Transient)
 	bool bIsEndingAbility = false;
+
+	FTimerHandle AbilityTimeoutHandle;
 };

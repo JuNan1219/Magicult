@@ -142,6 +142,8 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 				Damage += ElementDamage;
 			}
 		}
+
+		Damage *= MagicultEffectContext->AttackContext.DamageModifier;
 	}
 
 	const FGameplayModifierEvaluatedData EvaluatedData(UMagicultAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);

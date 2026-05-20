@@ -96,8 +96,10 @@ public:
 	static bool GetAmmoTypeData(const UObject* WorldContextObject, TArray<FSpellProjectileFeatureSpec>& OutAmmoTypeData);
 
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|ProjectileData")
-
 	static bool GetProjectileBaseClass(const UObject* WorldContextObject, TArray<FSpellProjectileClassEntry>& OutProjectileBaseClasses);
+
+	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|ProjectileData")
+	static bool GetModifierConfigs(const UObject* WorldContextObject, TArray<FSpellModifierConfig>& OutModifierConfigs);
 
 	/*
 	* TagToData End

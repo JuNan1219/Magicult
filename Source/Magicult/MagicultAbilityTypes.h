@@ -31,7 +31,7 @@ struct FAttackContext
 	bool bUseVelocityDamage = false;
 
 	UPROPERTY(BlueprintReadWrite)
-	bool IsSizeUp = false;
+	float DamageModifier = 1.0f;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 };

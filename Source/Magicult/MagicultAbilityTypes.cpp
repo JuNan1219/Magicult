@@ -101,7 +101,7 @@ bool FAttackContext::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bO
 	Ar << ElementLevel;
 	Ar << ElementRatio;
 	Ar << bUseVelocityDamage;
-	Ar << IsSizeUp;
+	Ar << DamageModifier;
 
 	return true;
 }

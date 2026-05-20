@@ -1,7 +1,6 @@
 #include "AttackInstance.h"
 #include "Abilities/GameplayAbilityTypes.h"
 #include "GameFramework/Actor.h"
-#include "TimerManager.h"
 #include "Engine/World.h"
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/MagicultGameplayTags.h"
@@ -52,7 +51,6 @@ void UAttackInstance::Execute()
 	bFinishing = false;
 	FinishReason = EAttackInstanceFinishReason::None;
 
-	StartAutoFinishTimer();
 	OnExecuteStarted();
 }
 
@@ -74,9 +72,6 @@ FVector UAttackInstance::GetActorVelocity() const
 
 void UAttackInstance::OnExecuteStarted_Implementation()
 {
-	// 여기에서 공격을 시작하지 않아도 됨
-	// Notify / GameplayEvent에서 시작해도 됨
-	// Attck 초기세팅 위치
 }
 
 void UAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag)
@@ -86,52 +81,10 @@ void UAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag
 		return;
 	}
 
-	if (EventTag.IsValid() && EventTag.MatchesTagExact(FMagicultGameplayTags::Get().Notify_Attack_End))
+	if (EventTag.MatchesTagExact(FMagicultGameplayTags::Get().Notify_Attack_End))
 	{
 		Finish();
-		return;
 	}
-
-	// 자식클래스에서 override해서 나머지 처리
-}
-
-void UAttackInstance::StartAutoFinishTimer()
-{
-	ClearAutoFinishTimer();
-
-	if (!bUseAutoFinish || AutoFinishDelay <= 0.f)
-	{
-		return;
-	}
-
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().SetTimer(
-			AutoFinishTimerHandle,
-			this,
-			&UAttackInstance::HandleAutoFinishTimeout,
-			AutoFinishDelay,
-			false
-		);
-	}
-}
-
-void UAttackInstance::ClearAutoFinishTimer()
-{
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(AutoFinishTimerHandle);
-	}
-}
-
-void UAttackInstance::HandleAutoFinishTimeout()
-{
-	if (!bActive || bFinishing)
-	{
-		return;
-	}
-
-	FinishInternal(EAttackInstanceFinishReason::Timeout);
 }
 
 void UAttackInstance::Finish()
@@ -155,15 +108,12 @@ void UAttackInstance::FinishInternal(EAttackInstanceFinishReason InReason)
 	bActive = false;
 	FinishReason = InReason;
 
-	ClearAutoFinishTimer();
 	OnFinishedInternal();
 	OnFinished.Broadcast(this);
 }
 
-
 void UAttackInstance::OnFinishedInternal_Implementation()
 {
-	// 종료 처리 장소
 }
 
 void UAttackInstance::SetOwnerActor(AActor* InOwner)
