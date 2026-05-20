@@ -14,6 +14,7 @@ AMagicultLobbyGameMode::AMagicultLobbyGameMode()
 	PlayerStateClass = AMagicultLobbyPlayerState::StaticClass();
 	GameStateClass = AMagicultLobbyGameState::StaticClass();
 
+	bUseSeamlessTravel = true;
 }
 
 void AMagicultLobbyGameMode::PostLogin(APlayerController* NewPlayer)
@@ -43,18 +44,30 @@ void AMagicultLobbyGameMode::StartGame()
 {
 	if (!HasAuthority()) return;
 
-	UWorld* World = GetWorld();
-	if (!World) return;
-
 	if (UGameInstance* GI = GetGameInstance())
 	{
 		if (UMultiplayerSessionsSubsystem* MSS = GI->GetSubsystem<UMultiplayerSessionsSubsystem>())
 		{
+			MSS->MultiplayerOnStartSessionComplete.AddDynamic(this, &ThisClass::OnStartSessionComplete);
 			MSS->StartSession();
 		}
 	}
+}
 
-	World->ServerTravel(GameMapPath + TEXT("?listen"));
+void AMagicultLobbyGameMode::OnStartSessionComplete(bool bWasSuccessful)
+{
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMultiplayerSessionsSubsystem* MSS = GI->GetSubsystem<UMultiplayerSessionsSubsystem>())
+		{
+			MSS->MultiplayerOnStartSessionComplete.RemoveDynamic(this, &ThisClass::OnStartSessionComplete);
+		}
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->ServerTravel(GameMapPath + TEXT("?listen"));
+	}
 }
 
 bool AMagicultLobbyGameMode::AreAllPlayersReady() const
@@ -78,6 +91,9 @@ bool AMagicultLobbyGameMode::AreAllPlayersReady() const
 
 void AMagicultLobbyGameMode::OnLobbyPlayerListChanged_Implementation()
 {
-	AMagicultLobbyGameState* LobbyGS = GetGameState<AMagicultLobbyGameState>(); 
-	LobbyGS -> MulticastOnPlayerListChanged();
+	AMagicultLobbyGameState* LobbyGS = GetGameState<AMagicultLobbyGameState>();
+	if (LobbyGS)
+	{
+		LobbyGS->MulticastOnPlayerListChanged();
+	}
 }

@@ -155,6 +155,12 @@ void UMenu::OnSessionEntrySelected(const FOnlineSessionSearchResult& Result)
 
 void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 {
+	if (Result != EOnJoinSessionCompleteResult::Success)
+	{
+		JoinButton->SetIsEnabled(true);
+		return;
+	}
+
 	IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
 	if (Subsystem)
 	{
@@ -170,10 +176,6 @@ void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 				PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 			}
 		}
-	}
-	if (Result != EOnJoinSessionCompleteResult::Success)
-	{
-		JoinButton->SetIsEnabled(true);
 	}
 }
 
