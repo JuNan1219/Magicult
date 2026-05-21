@@ -14,6 +14,8 @@ class MAGICULT_API AMagicultLobbyPlayerState : public APlayerState
 	GENERATED_BODY()
 
 public:
+	AMagicultLobbyPlayerState();
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(BlueprintAssignable)
