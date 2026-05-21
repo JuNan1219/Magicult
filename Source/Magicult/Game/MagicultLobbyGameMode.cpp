@@ -91,9 +91,11 @@ bool AMagicultLobbyGameMode::AreAllPlayersReady() const
 
 void AMagicultLobbyGameMode::OnLobbyPlayerListChanged_Implementation()
 {
+	// AddPlayerState/RemovePlayerState 오버라이드에서 클라이언트 UI 갱신을 처리하므로
+	// Multicast RPC 불필요 — 서버 측 GameState 직접 브로드캐스트만 수행
 	AMagicultLobbyGameState* LobbyGS = GetGameState<AMagicultLobbyGameState>();
 	if (LobbyGS)
 	{
-		LobbyGS->MulticastOnPlayerListChanged();
+		LobbyGS->OnLobbyPlayerListUpdated.Broadcast();
 	}
 }
