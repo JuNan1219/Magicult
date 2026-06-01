@@ -3,10 +3,13 @@
 #include "MagicultLobbyGameMode.h"
 #include "Magicult/Player/MagicultLobbyPlayerState.h"
 #include "Magicult/Game/MagicultLobbyGameState.h"
+#include "Magicult/Character/LobbyCharacter.h"
 
 #include "MultiplayerSessionsSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/GameStateBase.h"
+#include "GameFramework/PlayerStart.h"
+#include "EngineUtils.h"
 
 AMagicultLobbyGameMode::AMagicultLobbyGameMode()
 {
@@ -20,11 +23,71 @@ AMagicultLobbyGameMode::AMagicultLobbyGameMode()
 void AMagicultLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
+
+	// PlayerIndex 할당 (PlayerArray에서 현재 위치)
+	int32 NewPlayerIndex = -1;
+	if (AMagicultLobbyPlayerState* LPS = NewPlayer->GetPlayerState<AMagicultLobbyPlayerState>())
+	{
+		for (int32 i = 0; i < GameState->PlayerArray.Num(); ++i)
+		{
+			if (GameState->PlayerArray[i].Get() == LPS)
+			{
+				NewPlayerIndex = i;
+				break;
+			}
+		}
+		LPS->SetPlayerIndex(NewPlayerIndex);
+	}
+
+	SpawnLobbyCharacterFor(NewPlayer, NewPlayerIndex);
 	OnLobbyPlayerListChanged();
+}
+
+void AMagicultLobbyGameMode::SpawnLobbyCharacterFor(APlayerController* PC, int32 InPlayerIndex)
+{
+	if (!PC || !LobbyCharacterClass) return;
+
+	AActor* SpawnPoint = FindLobbySpawnPoint(InPlayerIndex);
+	const FTransform SpawnTransform = SpawnPoint ? SpawnPoint->GetActorTransform() : FTransform::Identity;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	ALobbyCharacter* Character = GetWorld()->SpawnActor<ALobbyCharacter>(LobbyCharacterClass, SpawnTransform, Params);
+	if (Character)
+	{
+		PC->Possess(Character);
+		Character->SetPlayerIndex(InPlayerIndex);
+	}
+}
+
+AActor* AMagicultLobbyGameMode::FindLobbySpawnPoint(int32 InPlayerIndex) const
+{
+	// PlayerStart에 태그 "P0", "P1" 등을 설정하면 해당 위치에 스폰
+	const FName TargetTag = FName(*FString::Printf(TEXT("P%d"), InPlayerIndex));
+	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+	{
+		if (It->PlayerStartTag == TargetTag)
+		{
+			return *It;
+		}
+	}
+	// 태그 없으면 처음 발견된 PlayerStart 사용
+	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+	{
+		return *It;
+	}
+	return nullptr;
 }
 
 void AMagicultLobbyGameMode::Logout(AController* Exiting)
 {
+	// 로비 캐릭터 제거
+	if (APawn* Pawn = Exiting->GetPawn())
+	{
+		Pawn->Destroy();
+	}
+
 	Super::Logout(Exiting);
 	OnLobbyPlayerListChanged();
 

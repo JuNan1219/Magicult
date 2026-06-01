@@ -35,6 +35,16 @@ public:
 	void InitializeStartupData();
 
 	FORCEINLINE int32 GetPlayerLevel() const { return Level; }
+	FORCEINLINE int32 GetPlayerIndex() const { return PlayerIndex; }
+
+	// SeamlessTravel 시 LobbyPlayerState → PlayerState로 PlayerIndex 전달
+	virtual void OverrideWith(APlayerState* PlayerState) override;
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+
+	// 0 = 1P(파란색), 1 = 2P(빨간색)
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int32 PlayerIndex = 0;
+
 protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
