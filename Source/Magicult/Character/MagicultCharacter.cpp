@@ -6,10 +6,13 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameStateBase.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Magicult/Player/MagicultPlayerState.h"
 #include "Magicult/UI/HUD/MagicultHUD.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/MagicultGameplayTags.h"
+#include "Net/UnrealNetwork.h"
 
 AMagicultCharacter::AMagicultCharacter()
 {
@@ -22,6 +25,12 @@ AMagicultCharacter::AMagicultCharacter()
 	bUseControllerRotationYaw = false;
 }
 
+void AMagicultCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AMagicultCharacter, PlayerIndex);
+}
+
 void AMagicultCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -31,7 +40,24 @@ void AMagicultCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// 서버 : Init ability actor info
+	// AGameModeBase는 SeamlessTravel 시 OverrideWith를 호출하지 않으므로
+	// PlayerState 대신 PlayerArray 순서로 PlayerIndex 결정
+	if (AGameStateBase* GS = GetWorld()->GetGameState())
+	{
+		if (APlayerState* PS = GetPlayerState<APlayerState>())
+		{
+			for (int32 i = 0; i < GS->PlayerArray.Num(); ++i)
+			{
+				if (GS->PlayerArray[i].Get() == PS)
+				{
+					PlayerIndex = i;
+					break;
+				}
+			}
+		}
+	}
+	ApplyPlayerColor();
+
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
 }
@@ -40,8 +66,22 @@ void AMagicultCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	// 클라이언트 : Init ability actor info
+	// 클라이언트: Init ability actor info
 	InitAbilityActorInfo();
+}
+
+void AMagicultCharacter::OnRep_PlayerIndex()
+{
+	ApplyPlayerColor();
+}
+
+void AMagicultCharacter::ApplyPlayerColor()
+{
+	UMaterialInterface* Material = (PlayerIndex == 0) ? Player1Material : Player2Material;
+	if (Material && GetMesh())
+	{
+		GetMesh()->SetMaterial(0, Material);
+	}
 }
 
 int32 AMagicultCharacter::GetPlayerLevel_Implementation()
