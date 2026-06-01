@@ -4,6 +4,7 @@
 #include "MagicultPlayerState.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/AbilitySystem/MagicultAttributeSet.h"
+#include "Magicult/Player/MagicultLobbyPlayerState.h"
 #include "GameplayEffect.h"
 #include "Net/UnrealNetwork.h"
 
@@ -28,6 +29,7 @@ void AMagicultPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMagicultPlayerState, Level);
+	DOREPLIFETIME(AMagicultPlayerState, PlayerIndex);
 }
 
 UAbilitySystemComponent* AMagicultPlayerState::GetAbilitySystemComponent() const
@@ -57,6 +59,25 @@ void AMagicultPlayerState::InitializeStartupData()
 	Cast<UMagicultAbilitySystemComponent>(AbilitySystemComponent)->UpdateAbilityStatuses(Level);
 
 	bIsStartupDataInitialized = true;
+}
+
+void AMagicultPlayerState::OverrideWith(APlayerState* PlayerState)
+{
+	Super::OverrideWith(PlayerState);
+	// SeamlessTravel 시 로비 PlayerState에서 PlayerIndex 복사
+	if (const AMagicultLobbyPlayerState* LPS = Cast<AMagicultLobbyPlayerState>(PlayerState))
+	{
+		PlayerIndex = LPS->PlayerIndex;
+	}
+}
+
+void AMagicultPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+	if (AMagicultPlayerState* MPS = Cast<AMagicultPlayerState>(PlayerState))
+	{
+		MPS->PlayerIndex = PlayerIndex;
+	}
 }
 
 void AMagicultPlayerState::OnRep_Level(int32 OldLevel)
