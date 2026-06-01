@@ -14,6 +14,7 @@ void AMagicultLobbyPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMagicultLobbyPlayerState, bIsReady);
+	DOREPLIFETIME(AMagicultLobbyPlayerState, PlayerIndex);
 }
 
 void AMagicultLobbyPlayerState::ServerSetReady_Implementation(bool bReady)
@@ -22,7 +23,17 @@ void AMagicultLobbyPlayerState::ServerSetReady_Implementation(bool bReady)
 	OnReadyStateChanged.Broadcast();
 }
 
+void AMagicultLobbyPlayerState::SetPlayerIndex(int32 InIndex)
+{
+	PlayerIndex = InIndex;
+}
+
 void AMagicultLobbyPlayerState::OnRep_bIsReady()
 {
 	OnReadyStateChanged.Broadcast();
+}
+
+void AMagicultLobbyPlayerState::OnRep_PlayerIndex()
+{
+	OnPlayerIndexChanged.Broadcast();
 }
