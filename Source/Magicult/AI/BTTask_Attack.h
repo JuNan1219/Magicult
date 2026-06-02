@@ -28,6 +28,14 @@ protected:
 
     UPROPERTY(EditAnywhere)
     TSubclassOf<UGameplayAbility> WaitAbilityClass;
+
+    FGameplayAbilitySpecHandle WaitingSpecHandle;
+
+    bool DoesAbilityRespondToEvent(const UGameplayAbility* Ability, const FGameplayTag& InEventTag) const;
+    FGameplayAbilitySpecHandle FindActivatedAbilitySpecHandleByEventTag(
+        UAbilitySystemComponent* ASC,
+        const FGameplayTag& InEventTag
+    ) const;
 private:
     void OnAbilityEnded(const FAbilityEndedData& EndedData);
 

@@ -15,7 +15,7 @@ enum class ECharacterClass : uint8
 {
 	Slime,
 	Cactus,
-	Sawrm,
+	Swarm,
 	Beholder,
 	Golrem
 };
