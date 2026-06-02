@@ -182,12 +182,15 @@ bool UActionExecutorSubsystem::CanExecuteAction(ESpellActionType ActionType, con
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
 {
+	// 액션 권한 분리:
+	//   코스메틱(Niagara·Cue) — 서버/클라 모두 실행하되, 전용 서버는 렌더러가 없으므로 스킵
+	//   권위(Damage·GE·Knockback 등) — 서버 전용. 클라이언트는 게임 상태 변경 불가
+	// TriggerQueue 자체는 서버·클라이언트 양쪽에서 처리되며,
+	// 각 머신은 자신에게 허용된 액션 타입만 실행한다.
 	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
 	                      || Action.ActionType == ESpellActionType::PlayCue;
 
-	// Cosmetic: Dedicated Server는 렌더러 없음 + GAS Cue 중복 전달 방지
 	if (bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) return {};
-	// Authoritative: 클라이언트는 게임 상태 변경 불가
 	if (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client))         return {};
 
 	if (!CanExecuteAction(Action.ActionType, Context))

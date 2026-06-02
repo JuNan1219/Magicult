@@ -227,12 +227,17 @@ void AMagicultCharacterBase::Dissolve()
 	}
 }
 
-void AMagicultCharacterBase::OnMaxSpeedChanged(const FOnAttributeChangeData& Data)
+void AMagicultCharacterBase::ApplyMaxSpeed_Implementation(float InMaxSpeed)
 {
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
-		MoveComp->MaxWalkSpeed = FMath::Max(0.f, Data.NewValue);
+		MoveComp->MaxWalkSpeed = FMath::Max(0.f, InMaxSpeed);
 	}
+}
+
+void AMagicultCharacterBase::OnMaxSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	ApplyMaxSpeed(Data.NewValue);
 }
 
 void AMagicultCharacterBase::ApplyCurrentMaxSpeed()
@@ -240,9 +245,5 @@ void AMagicultCharacterBase::ApplyCurrentMaxSpeed()
 	if (!AttributeSet) return;
 	UMagicultAttributeSet* MagicultAS = Cast<UMagicultAttributeSet>(AttributeSet);
 	if (!MagicultAS) return;
-
-	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
-	{
-		MoveComp->MaxWalkSpeed = FMath::Max(0.f, MagicultAS->GetMaxSpeed());
-	}
+	ApplyMaxSpeed(MagicultAS->GetMaxSpeed());
 }

@@ -105,6 +105,11 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
+
+	UFUNCTION(BlueprintNativeEvent)
+	void ApplyMaxSpeed(float InMaxSpeed);
+	virtual void ApplyMaxSpeed_Implementation(float InMaxSpeed);
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;

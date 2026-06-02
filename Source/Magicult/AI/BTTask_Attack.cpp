@@ -52,6 +52,12 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
         return EBTNodeResult::InProgress;
     }
 
+    if (AbilityEndedHandle.IsValid())
+    {
+        ASC->OnAbilityEnded.Remove(AbilityEndedHandle);
+        AbilityEndedHandle.Reset();
+    }
+
     // 이 EventTag로 실제 트리거된 GA가 없음
     return EBTNodeResult::Failed;
 }
@@ -74,6 +80,11 @@ void UBTTask_Attack::OnAbilityEnded(const FAbilityEndedData& EndedData)
 {
     if (!EndedData.AbilityThatEnded)
         return;
+
+    if (!WaitAbilityClass)
+    {
+        return;
+    }
 
     // 여기서 필터링
     if (!EndedData.AbilityThatEnded->IsA(WaitAbilityClass))

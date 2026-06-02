@@ -40,6 +40,7 @@ public:
 	virtual void SetInstanceConfig(UAttackInstanceConfig* InConfig);
 
 	void Execute();
+	UFUNCTION(BlueprintCallable)
 	void Finish();
 	UFUNCTION(BlueprintCallable)
 	void Cancel();
