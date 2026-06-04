@@ -16,10 +16,10 @@ struct FSpellTagLevelPair
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag Tag = FGameplayTag();
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 Level = 1;
 };
 
@@ -31,21 +31,21 @@ struct FSpellState
 	// 단일 선택 유형 태그 (FGameplayTag)
 	// (예: 속성, 방향 등 상호 배타적인 하나의 선택)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Magic Config")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Magic Config")
 	FGameplayTag DirectionTag;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Magic Config")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
 	FGameplayTag SpeedTag;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Magic Config")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
 	FSpellTagLevelPair ElementTagPair; // 예: Spell.Element.Fire
 
-	UPROPERTY(BlueprintReadOnly, Category = "Magic Config")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
 	FSpellTagLevelPair AmmoTypeTagPair;
 
 	// 다중 선택 효과 태그 (FGameplayTagContainer)
 	// (예: 중첩될 수 있는 부가적인 효과나 옵션)
-	UPROPERTY(BlueprintReadOnly, Category = "Magic Config")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
 	TMap<FGameplayTag, int32> EffectTags;
 
 	void Clear()
@@ -85,6 +85,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void SetSpellTag(const FGameplayTag& AbilityTag, int32 Level = 1);
+
+	UFUNCTION(BlueprintCallable, Category = "Magic")
+	void SetSpellState(const FSpellState& NewSpellState);
 
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void SetSpellDirectionTag(const FGameplayTag& DirectionTag);
