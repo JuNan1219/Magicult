@@ -77,6 +77,12 @@ void UMagicComponent::SetSpellTag(const FGameplayTag& AbilityTag, int32 Level)
 	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
 }
 
+void UMagicComponent::SetSpellState(const FSpellState& NewSpellState)
+{
+	CurrentSpellState = NewSpellState;
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+}
+
 void UMagicComponent::SetSpellDirectionTag(const FGameplayTag& DirectionTag)
 {
 	CurrentSpellState.DirectionTag = DirectionTag;
@@ -109,7 +115,7 @@ void UMagicComponent::AddSpellEffectTags(const FGameplayTag& EffectTag, int32 Le
 
 void UMagicComponent::SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag)
 {
-	if (!MagicCircleMaterials) return;
+	if (!MagicCircleMaterials && !MagicCircle) return;
 	FCircleInfo Info = MagicCircleMaterials->FindMagicCircleInfoForTag(ElementTag);
 	
 	if (Info.ElementMaterial)
@@ -120,10 +126,12 @@ void UMagicComponent::SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag
 
 void UMagicComponent::ActivateMagicCircle()
 {
+	if (MagicCircle)
 	MagicCircle->SetVisibility(true);
 }
 
 void UMagicComponent::DeactivateMagicCircle()
 {
-	MagicCircle->SetVisibility(false);
+	if(MagicCircle)
+		MagicCircle->SetVisibility(false);
 }
