@@ -82,6 +82,7 @@ void AMagicultCharacterBase::InitAbilityActorInfo()
 
 		// 이미 값이 들어와 있을 수 있으니 현재값 1회 적용
 		ApplyCurrentMaxSpeed();
+
 	}
 }
 
@@ -156,6 +157,19 @@ bool AMagicultCharacterBase::AttachActorToSocket_Implementation(const FGameplayT
 void AMagicultCharacterBase::Die()
 {
 	if (!HasAuthority()) return;
+
+	// 사망 시 모든 디버프 이펙트 제거 (태그 복제 → 클라이언트 비주얼 자동 정리)
+	if (AbilitySystemComponent)
+	{
+		const FMagicultGameplayTags& GameplayTags = FMagicultGameplayTags::Get();
+		FGameplayTagContainer DebuffTags;
+		DebuffTags.AddTag(GameplayTags.Debuff_Burn);
+		DebuffTags.AddTag(GameplayTags.Debuff_Freeze);
+		DebuffTags.AddTag(GameplayTags.Debuff_Stunned);
+		DebuffTags.AddTag(GameplayTags.Debuff_Ragdoll);
+		AbilitySystemComponent->RemoveActiveEffectsWithGrantedTags(DebuffTags);
+	}
+
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 	MulticastHandleDeath();
 }
