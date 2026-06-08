@@ -443,6 +443,21 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 		return Result;
 	}
 
+	// 사망한 대상에게는 디버프 적용 안 함
+	AActor* TargetActor = Context.TargetActor.Get();
+	if (TargetActor && ICombatInterface::Execute_IsDead(TargetActor))
+	{
+		return Result;
+	}
+
+	// 기존 동일 디버프 제거 후 갱신
+	if (DebuffSpec.DebuffTag.IsValid())
+	{
+		FGameplayTagContainer TagsToRemove;
+		TagsToRemove.AddTag(DebuffSpec.DebuffTag);
+		TargetASC->RemoveActiveEffectsWithGrantedTags(TagsToRemove);
+	}
+
 	for (const FDebuffEffectEntry& EffectEntry : DebuffSpec.EffectSpecs)
 	{
 		if (!EffectEntry.EffectClass)
@@ -473,11 +488,6 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 
 		if (DebuffSpec.DebuffTag.IsValid())
 		{
-			// 기존 동일 디버프 제거 후 갱신
-			FGameplayTagContainer TagsToRemove;
-			TagsToRemove.AddTag(DebuffSpec.DebuffTag);
-			TargetASC->RemoveActiveEffectsWithGrantedTags(TagsToRemove);
-
 			Spec->DynamicGrantedTags.AddTag(DebuffSpec.DebuffTag);
 		}
 
