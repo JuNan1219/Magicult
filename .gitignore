@@ -72,3 +72,6 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Third-party asset packs (stored separately in Google Drive)
+Content/Assets/
