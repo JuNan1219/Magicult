@@ -368,15 +368,6 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		TEXT("마법 모드 취소를 방지하는 집중 상태")
 	);
 
-	GameplayTags.Magic_Effect_DamageImmunity = UGameplayTagsManager::Get().AddNativeGameplayTag(
-		FName("Magic.Effect.DamageImmunity"),
-		TEXT("데미지 면역 상태")
-	);
-
-	GameplayTags.Magic_Effect_KnockbackImmunity = UGameplayTagsManager::Get().AddNativeGameplayTag(
-		FName("Magic.Effect.KnockbackImmunity"),
-		TEXT("넉백 면역 상태")
-	);
 
 	// Magic Status
 
@@ -684,4 +675,22 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.ElementsToGameplayCues.Add(GameplayTags.Magic_Element_Earth, GameplayTags.GameplayCue_Earth);
 	GameplayTags.ElementsToGameplayCues.Add(GameplayTags.Magic_Element_Wind, GameplayTags.GameplayCue_Wind);
 	GameplayTags.ElementsToGameplayCues.Add(GameplayTags.Magic_Element_Lightning, GameplayTags.GameplayCue_Lightning);
+
+	// Immunity
+	GameplayTags.Immunity_Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Damage"), FString(""));
+	GameplayTags.Immunity_Knockback = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Knockback"), FString(""));
+	GameplayTags.Immunity_Debuff = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Debuff"), FString(""));
+	GameplayTags.Immunity_Debuff_Effect_Slow = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Debuff.Effect.Slow"), FString(""));
+	GameplayTags.Immunity_Debuff_Effect_PeriodicDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Debuff.Effect.PeriodicDamage"), FString(""));
+	GameplayTags.Immunity_Stun = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Stun"), FString(""));
+
+	// Action
+	GameplayTags.Action_Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Damage"), FString(""));
+	GameplayTags.Action_RadialDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.RadialDamage"), FString(""));
+	GameplayTags.Action_Knockback = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Knockback"), FString(""));
+	GameplayTags.Action_Debuff = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Debuff"), FString(""));
+
+	// Debuff Effect
+	GameplayTags.Debuff_Effect_Slow = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Debuff.Effect.Slow"), FString(""));
+	GameplayTags.Debuff_Effect_PeriodicDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Debuff.Effect.PeriodicDamage"), FString(""));
 }

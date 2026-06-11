@@ -4,19 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "Magicult/Data/ActionExecutionConfig.h"
 #include "MagicultGameInstance.generated.h"
 
+class UImmunityPolicy;
+class UInterruptPolicy;
+
 /**
- * 
+ *
  */
 UCLASS()
 class MAGICULT_API UMagicultGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
-	
+
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
-	TObjectPtr<UActionExecutionConfig> ActionExecutionConfig;
+	TObjectPtr<UImmunityPolicy> ImmunityPolicy;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Action")
+	TObjectPtr<UInterruptPolicy> InterruptPolicy;
 };

@@ -4,20 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "SpellActionTypes.h"
 #include "ActionExecutionConfig.generated.h"
 
-/**
- * 
- */
+// Deprecated: ActionExecutionConfig는 ImmunityPolicy로 대체됨
 UCLASS()
 class MAGICULT_API UActionExecutionConfig : public UDataAsset
 {
 	GENERATED_BODY()
-	
-public:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    TArray<FActionConfig> ActionConfigs;
-
-    bool FindActionConfig(ESpellActionType ActionType, FActionConfig& OutActionConfig) const;
 };

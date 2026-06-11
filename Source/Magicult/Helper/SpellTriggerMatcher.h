@@ -17,6 +17,7 @@ private:
 		const FSpellTriggerEventData& EventData,
 		TArray<FSpellActionSpec>& OutActions);
 
-	static ESpellActionRequireFlags MakeContextFlags(const FSpellContext& Context);
-	
+	static uint8 MakeContextFlags(const FSpellContext& Context);
+	// ActionType별 기본 RequiredContextFlags 반환. 새 ActionType 추가 시 반드시 케이스 추가.
+	static uint8 GetRequiredFlagsForActionType(ESpellActionType ActionType);
 };
