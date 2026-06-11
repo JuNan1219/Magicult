@@ -8,6 +8,7 @@
 #include "Magicult/MagicultAbilityTypes.h"
 #include "Magicult/Data/ProjectileTypes.h"
 #include "Magicult/Data/SpellTypes.h"
+#include "Magicult/Data/SpellActionTypes.h"
 #include "CombatResolveSubsystem.generated.h"
 
 struct FSpellState;
@@ -30,6 +31,11 @@ public:
 	FElementInteractionResolveResult ResolveIncomingElement(const FSpellContext& InSpellContext, const FGameplayTag& IncomingElementTag);
 	bool ResolveElementInteraction(const FSpellContext& InSpellContext,const FGameplayTag& IncomingElementTag, FElementInteractionResolveResult& CombatResolveResult);
 	void ResolveElementDebuff(const FSpellContext& InSpellContext,const FGameplayTag& IncomingElementTag, FElementInteractionResolveResult& CombatResolveResult);
+
+	TArray<FSpellActionExecutionRequest> ResolveInterrupt(
+		const FGameplayTag& ActionResultTag,
+		const FSpellContext& Context) const;
+
 protected:
 
 };

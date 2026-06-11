@@ -5,11 +5,12 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Magicult/Data/SpellActionTypes.h"
-#include "Magicult/Data/ActionExecutionConfig.h"
 #include "ActionExecutorSubsystem.generated.h"
 
+struct FSpellContext;
+
 /**
- * 
+ *
  */
 UCLASS()
 class MAGICULT_API UActionExecutorSubsystem : public UWorldSubsystem
@@ -19,10 +20,8 @@ class MAGICULT_API UActionExecutorSubsystem : public UWorldSubsystem
 public:
 	TArray<FSpellTriggerEventData> ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request);
 
-	const UActionExecutionConfig* GetActionExecutionConfig() const;
-	bool CanPassRequiredTags(const UAbilitySystemComponent* ASC, const FGameplayTagContainer& RequiredTags) const;
-	bool CanPassBlockedTags(const UAbilitySystemComponent* ASC, const FGameplayTagContainer& BlockedTags) const;
-	bool CanExecuteAction(ESpellActionType ActionType, const FSpellContext& Context) const;
+	// Tag를 ImmunityPolicy에서 조회하여 대상 ASC가 면역 태그를 보유 중이면 true 반환
+	bool CheckImmunity(const FGameplayTag& Tag, const FSpellContext& Context) const;
 
 	FSpellActionExecutionResult ExecuteSingleAction(
 		const FSpellActionSpec& Action,
@@ -30,12 +29,12 @@ public:
 
 private:
 	FSpellActionExecutionResult ExecuteConsumePierce(
-		const FSpellConsumePierceActionSpec& ActConsumePierceSpecion,
+		const FSpellConsumePierceActionSpec& ConsumePierceSpec,
 		const FSpellContext& Context);
 
 	FSpellActionExecutionResult ExecuteApplyDamage(
-		const FSpellContext& Context
-		, bool IsRadialDamage = false);
+		const FSpellContext& Context,
+		bool IsRadialDamage = false);
 
 	FSpellActionExecutionResult ExecuteRadialDamage(
 		const FSpellRadialDamageActionSpec& RadialDamageSpec,
@@ -56,7 +55,7 @@ private:
 	FSpellActionExecutionResult ExecuteGameplayEffect(
 		const FSpellApplyGEActionSpec& ApplyGESpec,
 		const FSpellContext& Context);
-	
+
 	FSpellActionExecutionResult ExecuteEmitNiagara(
 		const FSpellEmitNiagaraActionSpec& EmitNiagaraSpec,
 		const FSpellContext& Context);
@@ -66,7 +65,7 @@ private:
 		const FSpellContext& Context);
 
 	FSpellActionExecutionResult ExecuteKnockback(
-		const FSpellKnockbackActionSpec& KnockbackSpec, 
+		const FSpellKnockbackActionSpec& KnockbackSpec,
 		const FSpellContext& Context);
 
 	FSpellActionExecutionResult ExecuteDestroyActor(
@@ -75,7 +74,4 @@ private:
 	FSpellActionExecutionResult ExecuteInterrupt(
 		const FSpellInterruptActionSpec& InterruptSpec,
 		const FSpellContext& Context);
-
-	UPROPERTY(Transient)
-	mutable TObjectPtr<UActionExecutionConfig> ActionExecutionConfig;
 };

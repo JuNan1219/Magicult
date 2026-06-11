@@ -6,6 +6,8 @@
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
 #include "Magicult/Component/MagicComponent.h"
 #include "Magicult/Data/ProjectileTypes.h"
+#include "Magicult/Data/InterruptPolicy.h"
+#include "Magicult/Game/MagicultGameInstance.h"
 
 #include "Magicult/MagicultGameplayTags.h"
 
@@ -271,7 +273,7 @@ void UCombatResolveSubsystem::ResolveElementDebuff(const FSpellContext& InSpellC
 		{
 			continue;
 		}
-		
+
 		FSpellDebuffActionSpec DebuffSpec;
 		DebuffSpec.DebuffTag = Rule.DebuffTag;
 		DebuffSpec.EffectSpecs = Rule.EffectSpecs;
@@ -283,4 +285,29 @@ void UCombatResolveSubsystem::ResolveElementDebuff(const FSpellContext& InSpellC
 
 		ElementInteractionResolveResult.DebuffActionRequests.Emplace(DubuffAction, InSpellContext);
 	}
+}
+
+TArray<FSpellActionExecutionRequest> UCombatResolveSubsystem::ResolveInterrupt(
+	const FGameplayTag& ActionResultTag, const FSpellContext& Context) const
+{
+	TArray<FSpellActionExecutionRequest> Requests;
+
+	const UMagicultGameInstance* GI = GetWorld()->GetGameInstance<UMagicultGameInstance>();
+	if (!GI || !GI->InterruptPolicy)
+	{
+		UE_LOG(LogTemp, Fatal, TEXT("[InterruptPolicy] GameInstance에 InterruptPolicy가 설정되지 않았습니다."));
+		return Requests;
+	}
+
+	for (const FInterruptRule& Rule : GI->InterruptPolicy->InterruptRules)
+	{
+		if (Rule.TriggerActionTag != ActionResultTag) continue;
+
+		FSpellActionSpec InterruptAction;
+		InterruptAction.ActionType = ESpellActionType::Interrupt;
+		InterruptAction.InterruptSpec = Rule.InterruptSpec;
+		Requests.Emplace(InterruptAction, Context);
+	}
+
+	return Requests;
 }

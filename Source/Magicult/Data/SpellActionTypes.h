@@ -14,14 +14,12 @@ enum class ESpellActionType : uint8
 {
 	None,
 	ConsumePierce,
-	Stop,
 	ApplyDamage,
 	ApplyRadialDamage,
 	ApplyElement,
 	ApplyDebuff,
 	SpawnActor,
 	ApplyGameplayEffect,
-	ModifyProjectile,
 	EmitNiagara,
 	PlayCue,
 	Knockback,
@@ -42,40 +40,6 @@ enum class ESpellActionTargetPolicy : uint8
 	SocketTransform
 };
 
-UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
-enum class ESpellActionRequireFlags : uint8
-{
-	None = 0,
-	HasSourceASC = 1 << 0,
-	HasTargetASC = 1 << 1,
-	HasSourceActor = 1 << 2,
-	HasTargetActor = 1 << 3,
-	HasDamageCauser = 1 << 4,
-	HasHitResult = 1 << 5,
-};
-
-USTRUCT(BlueprintType)
-struct FActionConfig
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	ESpellActionType ActionType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGameplayTagContainer RequiredSourceTags;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGameplayTagContainer BlockedSourceTags;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGameplayTagContainer RequiredTargetTags;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGameplayTagContainer BlockedTargetTags;
-};
-
-ENUM_CLASS_FLAGS(ESpellActionRequireFlags);
 
 USTRUCT(BlueprintType)
 struct FSpellConsumePierceActionSpec
@@ -94,7 +58,7 @@ struct FSpellDebuffActionSpec
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag DebuffTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -205,10 +169,6 @@ struct FSpellKnockbackActionSpec
 	// physics simulating primitive면 impulse 사용
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Knockback")
 	bool bAffectPhysicsBodies = true;
-
-	// 넉백 성공 시 자동으로 발동할 인터럽트 (CancelTags가 비어 있으면 스킵)
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Knockback")
-	FSpellInterruptActionSpec InterruptSpec;
 };
 
 USTRUCT(BlueprintType)
@@ -223,10 +183,11 @@ struct FSpellRadialDamageActionSpec
 	bool bIgnoreOwner = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage")
-	FSpellKnockbackActionSpec KnockbackSpec;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage")
 	bool bApplyKnockback = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage",
+		meta = (EditCondition = "bApplyKnockback", EditConditionHides))
+	FSpellKnockbackActionSpec KnockbackSpec;
 };
 
 USTRUCT(BlueprintType)
@@ -236,15 +197,6 @@ struct FSpellActionSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
 	ESpellActionType ActionType = ESpellActionType::None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (Bitmask, BitmaskEnum = "/Script/Magicult.ESpellActionRequireFlags"))
-	int32 RequiredContextFlags = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
-	FGameplayTag ActionTag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action")
-	FGameplayTagContainer ActionTags;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::ConsumePierce", EditConditionHides))
@@ -315,8 +267,8 @@ USTRUCT(BlueprintType)
 struct FSpellActionExecutionResult
 {
 	GENERATED_BODY()
-	
-	// 추가로 발생시킨 트리거 
+
+	// 추가로 발생시킨 트리거
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FSpellTriggerEventData> GeneratedTriggerEvents;
 
@@ -324,6 +276,19 @@ struct FSpellActionExecutionResult
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FSpellActionExecutionRequest> GeneratedActionRequests;
 
+	// 액션이 실제로 성공적으로 적용됐는지 여부
+	// true  = 정상 실행 완료
+	// false = 면역·유효성 실패 등으로 적용되지 않음
 	UPROPERTY(BlueprintReadOnly)
-	bool bStopExecution = false;
+	bool bApplied = true;
+
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayTag ResultTag;
+
+	FSpellActionExecutionResult() = default;
+
+	// 성공 여부를 직접 지정하는 생성자. 면역·조기 종료 시 false를 전달한다.
+	explicit FSpellActionExecutionResult(bool bWasApplied)
+		: bApplied(bWasApplied)
+	{}
 };

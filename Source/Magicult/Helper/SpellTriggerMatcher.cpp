@@ -1,5 +1,17 @@
 #include "SpellTriggerMatcher.h"
 
+// Context 플래그 비트 정의 (ESpellActionRequireFlags 제거 후 내부 사용)
+namespace SpellContextFlags
+{
+	constexpr uint8 None           = 0;
+	constexpr uint8 HasSourceASC   = 1 << 0;
+	constexpr uint8 HasTargetASC   = 1 << 1;
+	constexpr uint8 HasSourceActor = 1 << 2;
+	constexpr uint8 HasTargetActor = 1 << 3;
+	constexpr uint8 HasDamageCauser= 1 << 4;
+	constexpr uint8 HasHitResult   = 1 << 5;
+}
+
 void FSpellTriggerMatcher::CollectActions(const TArray<FSpellTriggerActionBinding>& Bindings, const FSpellTriggerEventData& EventData, TArray<FSpellActionSpec>& OutActions)
 {
 	for (const FSpellTriggerActionBinding& Binding : Bindings)
@@ -27,13 +39,13 @@ bool FSpellTriggerMatcher::TryCollectActions(const FSpellTriggerActionBinding& B
 		return false;
 	}
 
-	const ESpellActionRequireFlags CurrentFlags = MakeContextFlags(EventData.SpellContext);
+	const uint8 CurrentFlags = MakeContextFlags(EventData.SpellContext);
 
 	for (const FSpellActionSpec& ActionSpec : Binding.Actions)
 	{
-		const ESpellActionRequireFlags RequiredFlags = static_cast<ESpellActionRequireFlags>(ActionSpec.RequiredContextFlags);
+		const uint8 RequiredFlags = GetRequiredFlagsForActionType(ActionSpec.ActionType);
 
-		if (!EnumHasAllFlags(CurrentFlags, RequiredFlags))
+		if ((CurrentFlags & RequiredFlags) != RequiredFlags)
 		{
 			continue;
 		}
@@ -43,27 +55,53 @@ bool FSpellTriggerMatcher::TryCollectActions(const FSpellTriggerActionBinding& B
 	return !OutActions.IsEmpty();
 }
 
-ESpellActionRequireFlags FSpellTriggerMatcher::MakeContextFlags(const FSpellContext& Context)
+uint8 FSpellTriggerMatcher::MakeContextFlags(const FSpellContext& Context)
 {
-	ESpellActionRequireFlags Flags = ESpellActionRequireFlags::None;
+	uint8 Flags = SpellContextFlags::None;
 
 	if (Context.SourceAbilitySystemComponent.IsValid())
-		Flags |= ESpellActionRequireFlags::HasSourceASC;
+		Flags |= SpellContextFlags::HasSourceASC;
 
 	if (Context.TargetAbilitySystemComponent.IsValid())
-		Flags |= ESpellActionRequireFlags::HasTargetASC;
+		Flags |= SpellContextFlags::HasTargetASC;
 
 	if (Context.SourceActor.IsValid())
-		Flags |= ESpellActionRequireFlags::HasSourceActor;
+		Flags |= SpellContextFlags::HasSourceActor;
 
 	if (Context.TargetActor.IsValid())
-		Flags |= ESpellActionRequireFlags::HasTargetActor;
+		Flags |= SpellContextFlags::HasTargetActor;
 
 	if (Context.DamageCauser.IsValid())
-		Flags |= ESpellActionRequireFlags::HasDamageCauser;
+		Flags |= SpellContextFlags::HasDamageCauser;
 
 	if (Context.bHasHitResult)
-		Flags |= ESpellActionRequireFlags::HasHitResult;
+		Flags |= SpellContextFlags::HasHitResult;
 
 	return Flags;
+}
+
+uint8 FSpellTriggerMatcher::GetRequiredFlagsForActionType(ESpellActionType ActionType)
+{
+	using namespace SpellContextFlags;
+
+	switch (ActionType)
+	{
+	case ESpellActionType::ConsumePierce:      return HasDamageCauser;
+	case ESpellActionType::ApplyDamage:        return HasTargetASC;
+	case ESpellActionType::ApplyRadialDamage:  return None;
+	case ESpellActionType::ApplyElement:       return HasTargetASC;
+	case ESpellActionType::ApplyDebuff:        return HasTargetASC | HasSourceASC;
+	case ESpellActionType::SpawnActor:         return None;
+	case ESpellActionType::ApplyGameplayEffect:return HasTargetASC | HasSourceASC;
+	case ESpellActionType::EmitNiagara:        return None;
+	case ESpellActionType::PlayCue:            return None;
+	case ESpellActionType::Knockback:          return HasTargetActor;
+	case ESpellActionType::DestroyActor:       return HasDamageCauser;
+	case ESpellActionType::Interrupt:          return HasTargetASC;
+	case ESpellActionType::None:               return None;
+	// default 없음 — 새 ActionType 추가 시 여기도 반드시 채워야 컴파일됨
+	}
+
+	// 알 수 없는 ActionType — 모든 플래그 요구해서 실행 차단
+	return None;
 }

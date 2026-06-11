@@ -20,6 +20,7 @@
 #include "Magicult/Interface/ElementCarrierInterface.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Game/MagicultGameInstance.h"
+#include "Magicult/Data/ImmunityPolicy.h"
 
 TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request)
 {
@@ -62,122 +63,39 @@ TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TA
 			ResultTriggerEventData.Append(Result.GeneratedTriggerEvents);
 		}
 
-		if (Result.bStopExecution)
+		// [POST] 성공 적용된 액션에 대해 InterruptPolicy 기반 인터럽트 요청 생성
+		if (Result.bApplied && Result.ResultTag.IsValid())
 		{
-			break;
+			if (UCombatResolveSubsystem* CRS = GetWorld()->GetSubsystem<UCombatResolveSubsystem>())
+			{
+				TArray<FSpellActionExecutionRequest> InterruptRequests = CRS->ResolveInterrupt(Result.ResultTag, CurrentContext);
+				for (const FSpellActionExecutionRequest& Req : InterruptRequests)
+				{
+					PendingExecutionQueue.Enqueue(Req);
+				}
+			}
 		}
 	}
 
 	return ResultTriggerEventData;
 }
 
-const UActionExecutionConfig* UActionExecutorSubsystem::GetActionExecutionConfig() const
+bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpellContext& Context) const
 {
-	const UWorld* World = GetWorld();
-	if (!World)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("World를 찾을 수 없습니다."));
-		return nullptr;
-	}
+	const UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
+	if (!TargetASC) return false;
 
-	const UMagicultGameInstance* MagicultGameInstance = World->GetGameInstance<UMagicultGameInstance>();
-	if (!MagicultGameInstance)
+	const UMagicultGameInstance* GI = GetWorld()->GetGameInstance<UMagicultGameInstance>();
+	if (!GI || !GI->ImmunityPolicy)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("MyGameInstance를 찾을 수 없습니다."));
-		return nullptr;
-	}
-
-	if (!MagicultGameInstance->ActionExecutionConfig)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ActionExecutionConfig가 GameInstance에 설정되어 있지 않습니다."));
-		return nullptr;
-	}
-
-	ActionExecutionConfig = MagicultGameInstance->ActionExecutionConfig;
-	return ActionExecutionConfig;
-}
-
-bool UActionExecutorSubsystem::CanPassRequiredTags(const UAbilitySystemComponent* ASC, const FGameplayTagContainer& RequiredTags) const
-{
-	// RequiredTags가 없으면 ASC 없어도 통과
-	if (RequiredTags.IsEmpty())
-	{
-		return true;
-	}
-
-	// RequiredTags가 있는데 ASC가 없으면 검사 불가능하므로 실패
-	if (!ASC)
-	{
+		UE_LOG(LogTemp, Fatal, TEXT("[ImmunityPolicy] GameInstance에 ImmunityPolicy가 설정되지 않았습니다."));
 		return false;
 	}
 
-	return ASC->HasAllMatchingGameplayTags(RequiredTags);
-}
+	FGameplayTag ImmunityTag;
+	if (!GI->ImmunityPolicy->FindImmunityTag(Tag, ImmunityTag)) return false;
 
-bool UActionExecutorSubsystem::CanPassBlockedTags(const UAbilitySystemComponent* ASC, const FGameplayTagContainer& BlockedTags) const
-{
-	// ASC가 없으면 막을 태그도 없으므로 통과
-	if (!ASC)
-	{
-		return true;
-	}
-
-	// BlockedTags가 비어 있으면 당연히 통과
-	if (BlockedTags.IsEmpty())
-	{
-		return true;
-	}
-
-	// 하나라도 걸리면 실패
-	return !ASC->HasAnyMatchingGameplayTags(BlockedTags);
-}
-
-bool UActionExecutorSubsystem::CanExecuteAction(ESpellActionType ActionType, const FSpellContext& Context) const
-{
-	const UActionExecutionConfig* Config = GetActionExecutionConfig();
-	if (!Config)
-	{
-		return false;
-	}
-
-	FActionConfig ActionConfig;
-	if (!Config->FindActionConfig(ActionType, ActionConfig))
-	{
-		// 제약이 없으면 바로 통과
-		return true;
-	}
-
-	const UAbilitySystemComponent* SourceASC =
-		Context.SourceAbilitySystemComponent.Get();
-
-	const UAbilitySystemComponent* TargetASC =
-		Context.TargetAbilitySystemComponent.Get();
-
-	// Source Required Tags
-	if (!CanPassRequiredTags(SourceASC, ActionConfig.RequiredSourceTags))
-	{
-		return false;
-	}
-
-	// Target Required Tags
-	if (!CanPassRequiredTags(TargetASC, ActionConfig.RequiredTargetTags))
-	{
-		return false;
-	}
-
-	// Source Blocked Tags
-	if (!CanPassBlockedTags(SourceASC, ActionConfig.BlockedSourceTags))
-	{
-		return false;
-	}
-
-	// Target Blocked Tags
-	if (!CanPassBlockedTags(TargetASC, ActionConfig.BlockedTargetTags))
-	{
-		return false;
-	}
-
-	return true;
+	return TargetASC->HasMatchingGameplayTag(ImmunityTag);
 }
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
@@ -193,12 +111,6 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	if (bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) return {};
 	if (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client))         return {};
 
-	if (!CanExecuteAction(Action.ActionType, Context))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Action Tag검사에 실패했습니다. %s"), *UEnum::GetValueAsString(Action.ActionType));
-		return FSpellActionExecutionResult();
-	}
-
 	switch (Action.ActionType)
 	{
 	case ESpellActionType::ConsumePierce:
@@ -212,7 +124,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	case ESpellActionType::ApplyDebuff:
 		return ExecuteApplyDebuff(Action.DebuffSpec, Context);
 	case ESpellActionType::SpawnActor:
-		// TODO : SpawnActorSpec에서 TriggerAction 설정하도록 
+		// TODO : SpawnActorSpec에서 TriggerAction 설정하도록
 		return ExecuteSpawnActor(Action.SpawnActorSpec, Context);
 	case ESpellActionType::ApplyGameplayEffect:
 		return ExecuteGameplayEffect(Action.ApplyGESpec, Context);
@@ -233,7 +145,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	return FSpellActionExecutionResult();
 }
 
-FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteConsumePierce(const FSpellConsumePierceActionSpec& ConsumePierceSpec,	const FSpellContext& Context)
+FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteConsumePierce(const FSpellConsumePierceActionSpec& ConsumePierceSpec, const FSpellContext& Context)
 {
 	FSpellActionExecutionResult Result;
 
@@ -263,11 +175,14 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 {
 	FSpellActionExecutionResult Result;
 
+	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Damage, Context))
+		return FSpellActionExecutionResult(false);
+
 	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
 	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
 	if (!TargetASC)
 	{
-		return Result;
+		return FSpellActionExecutionResult(false);
 	}
 
 	const bool bAppliedDamage = UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(Context, SourceASC, TargetASC, IsRadialDamage);
@@ -282,7 +197,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 	TriggerData.SpellContext = Context;
 
 	if (IsRadialDamage)
-		TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Radial); 
+		TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Radial);
 	else
 		TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Direct);
 
@@ -293,6 +208,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 	{
 		if (!AttackContextProvider->GetAttackSpec().ElementTag.IsValid())
 		{
+			Result.ResultTag = FMagicultGameplayTags::Get().Action_Damage;
 			return Result;
 		}
 
@@ -303,6 +219,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 		Result.GeneratedActionRequests.Emplace(SpellAction, Context);
 	}
 
+	Result.ResultTag = FMagicultGameplayTags::Get().Action_Damage;
 	return Result;
 }
 
@@ -384,12 +301,10 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const 
 			{
 				FSpellActionSpec KnockbackAction;
 				KnockbackAction.ActionType = ESpellActionType::Knockback;
-				KnockbackAction.KnockbackSpec = RadialDamageSpec.KnockbackSpec; 
+				KnockbackAction.KnockbackSpec = RadialDamageSpec.KnockbackSpec;
 
 				Result.GeneratedActionRequests.Emplace(KnockbackAction, RadialContext);
 			}
-
-			Result.bStopExecution |= DamageResult.bStopExecution;
 		}
 	}
 
@@ -405,7 +320,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteResolveElementInter
 	{
 		return Result;
 	}
-	
+
 	FElementInteractionResolveResult ElementInteractionResolveResult = CombatresolveSubsystem->ResolveIncomingElement(Context, ApplyElementSpec.IncomingElement);
 
 	Result.GeneratedActionRequests.Append(ElementInteractionResolveResult.InteractionActionRequests);
@@ -436,18 +351,27 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 {
 	FSpellActionExecutionResult Result;
 
+	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Debuff, Context))
+		return FSpellActionExecutionResult(false);
+
 	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
 	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
 	if (!SourceASC || !TargetASC)
 	{
-		return Result;
+		return FSpellActionExecutionResult(false);
 	}
 
 	// 사망한 대상에게는 디버프 적용 안 함
 	AActor* TargetActor = Context.TargetActor.Get();
 	if (TargetActor && ICombatInterface::Execute_IsDead(TargetActor))
 	{
-		return Result;
+		return FSpellActionExecutionResult(false);
+	}
+
+	// 개별 디버프 타입 면역 (예: Debuff.Freeze)
+	if (DebuffSpec.DebuffTag.IsValid() && CheckImmunity(DebuffSpec.DebuffTag, Context))
+	{
+		return FSpellActionExecutionResult(false);
 	}
 
 	// 기존 동일 디버프 제거 후 갱신
@@ -460,6 +384,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 
 	for (const FDebuffEffectEntry& EffectEntry : DebuffSpec.EffectSpecs)
 	{
+		if (EffectEntry.Tag.IsValid() && CheckImmunity(EffectEntry.Tag, Context)) continue;
+
 		if (!EffectEntry.EffectClass)
 		{
 			continue;
@@ -521,6 +447,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 		TargetASC->ApplyGameplayEffectSpecToSelf(*Spec);
 	}
 
+	Result.ResultTag = DebuffSpec.DebuffTag;
 	return Result;
 }
 
@@ -804,10 +731,13 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 			return FVector::ZeroVector;
 		};
 
+	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Knockback, Context))
+		return FSpellActionExecutionResult(false);
+
 	AActor* TargetActor = ResolveActorByPolicy(KnockbackSpec.TargetPolicy);
 	if (!TargetActor)
 	{
-		return Result;
+		return FSpellActionExecutionResult(false);
 	}
 
 	const FVector TargetLocation = TargetActor->GetActorLocation();
@@ -838,7 +768,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 	if (!KnockbackDirection.Normalize())
 	{
-		return Result;
+		return FSpellActionExecutionResult(false);
 	}
 
 	// Character면 RootMotionSource 사용
@@ -864,14 +794,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 		MoveComp->ApplyRootMotionSource(RMS);
 
-		if (!KnockbackSpec.InterruptSpec.CancelTags.IsEmpty())
-		{
-			FSpellActionSpec InterruptAction;
-			InterruptAction.ActionType = ESpellActionType::Interrupt;
-			InterruptAction.InterruptSpec = KnockbackSpec.InterruptSpec;
-			Result.GeneratedActionRequests.Emplace(InterruptAction, Context);
-		}
-
+		Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
 		return Result;
 	}
 
@@ -903,10 +826,10 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteInterrupt(
 	const FSpellInterruptActionSpec& InterruptSpec, const FSpellContext& Context)
 {
 	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
-	if (!TargetASC || InterruptSpec.CancelTags.IsEmpty()) return {};
+	if (!TargetASC || InterruptSpec.CancelTags.IsEmpty()) return FSpellActionExecutionResult(false);
 
 	TargetASC->CancelAbilities(&InterruptSpec.CancelTags);
-	return {};
+	return FSpellActionExecutionResult(true);
 }
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteDestroyActor(const FSpellContext& Context)

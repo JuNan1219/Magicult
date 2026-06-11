@@ -118,8 +118,23 @@ public:
 	FGameplayTag Magic_Effect_DefaultDirection;
 	FGameplayTag Magic_Effect_DefaultSpeed;
 	FGameplayTag Magic_Effect_Concentration;
-	FGameplayTag Magic_Effect_DamageImmunity;
-	FGameplayTag Magic_Effect_KnockbackImmunity;
+	// Immunity 태그
+	FGameplayTag Immunity_Damage;
+	FGameplayTag Immunity_Knockback;
+	FGameplayTag Immunity_Debuff;
+	FGameplayTag Immunity_Debuff_Effect_Slow;
+	FGameplayTag Immunity_Debuff_Effect_PeriodicDamage;
+	FGameplayTag Immunity_Stun;
+
+	// Action 태그
+	FGameplayTag Action_Damage;
+	FGameplayTag Action_RadialDamage;
+	FGameplayTag Action_Knockback;
+	FGameplayTag Action_Debuff;
+
+	// Debuff 서브 이펙트 태그
+	FGameplayTag Debuff_Effect_Slow;
+	FGameplayTag Debuff_Effect_PeriodicDamage;
 
 	// 상태
 	FGameplayTag Magic_Status_Locked;
