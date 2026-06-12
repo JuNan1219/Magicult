@@ -23,4 +23,8 @@ struct FAttackSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DamageModifier = 1.0f;
+
+	// true면 아군을 피아식별해서 공격하지 않는다. false(기본)면 아군 포함 모두 공격.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bTargetEnemiesOnly = false;
 };

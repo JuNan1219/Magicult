@@ -50,9 +50,6 @@ struct FProjectileClientInitData
 	float LifeSpanMultiplier = 1.0f;
 
 	UPROPERTY()
-	bool bFriendlyFire = false;
-
-	UPROPERTY()
 	bool bTracking = false;
 
 	UPROPERTY()
@@ -129,13 +126,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	float RehitCooldown = 0.5f;
 
-	bool bFriendlyFire = false;
-
 	UPROPERTY(ReplicatedUsing = OnRep_TriggerActions, BlueprintReadOnly)
 	TArray<FSpellTriggerActionBinding> TriggerActions;
 private:
 	bool bProjectileInitialized = false;
-	bool IsValidImpact(AActor* OtherActor);
+	bool IsValidImpact(AActor* SourceAvatarActor, AActor* OtherActor) const;
 
 	void BindCollisionPolicy(ESpellCollisionEventPolicy Policy);
 	void ConfigureCollisionForPolicy(ESpellCollisionEventPolicy Policy);

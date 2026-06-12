@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "TriggerTypes.h"
 #include "DebuffTypes.h"
@@ -80,7 +80,7 @@ struct FSpellSpawnActorActionSpec
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Spawn")
-	TSoftClassPtr<AActor> ActorClass;
+	TSubclassOf<AActor> ActorClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Spawn")
 	FTransform RelativeTransform = FTransform::Identity;
@@ -261,6 +261,10 @@ struct FSpellActionExecutionRequest
 
 	UPROPERTY(BlueprintReadOnly)
 	FSpellContext Context;
+
+	// 액션 체인 깊이. 트리거에서 직접 만든 요청=0, 파생 요청=부모+1.
+	// ExecuteRequest가 이 값으로 같은 실행 배치 안의 순환(원소 반응 등)을 차단한다.
+	int32 ChainDepth = 0;
 };
 
 USTRUCT(BlueprintType)

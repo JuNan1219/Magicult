@@ -187,6 +187,16 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("Character.Mode.Effect"),
 		TEXT("")
 	);
+
+	// Character Team (피아식별 파벌)
+	GameplayTags.Character_Team_Player = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Character.Team.Player"),
+		TEXT("플레이어 파벌. 같은 파벌 태그를 가진 대상끼리는 아군으로 판정한다.")
+	);
+	GameplayTags.Character_Team_Enemy = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Character.Team.Enemy"),
+		TEXT("적 파벌. 같은 파벌 태그를 가진 대상끼리는 아군으로 판정한다.")
+	);
 	// Magic
 	GameplayTags.Magic = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Magic"),
