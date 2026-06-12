@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "SpellTypes.h"
 #include "TriggerTypes.generated.h"
@@ -33,6 +33,10 @@ struct FSpellTriggerEventData
 
 	UPROPERTY(BlueprintReadWrite)
 	FSpellContext SpellContext;
+
+	// 체인 반응 깊이. 플레이어/AI 직접 발생 이벤트=0, 파생 이벤트=부모+1.
+	// ProcessTriggerQueue가 이 값으로 무한 체인을 차단한다.
+	int32 ChainDepth = 0;
 };
 
 /*

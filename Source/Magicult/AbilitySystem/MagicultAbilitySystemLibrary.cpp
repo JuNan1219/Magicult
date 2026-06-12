@@ -519,10 +519,23 @@ TArray<FVector> UMagicultAbilitySystemLibrary::EvenlyRotatedVectors(const FVecto
 
 bool UMagicultAbilitySystemLibrary::IsNotFriend(AActor* FirstActor, AActor* SecondActor)
 {
-	const bool bBothArePlayers = FirstActor->ActorHasTag(FName("Player")) && SecondActor->ActorHasTag(FName("Player"));
-	const bool bBothAreEnemies = FirstActor->ActorHasTag(FName("Enemy")) && SecondActor->ActorHasTag(FName("Enemy"));
-	const bool bFriends = bBothArePlayers || bBothAreEnemies;
-	return !bFriends;
+	if (!FirstActor || !SecondActor) return true;
+
+	// 파벌 태그가 같으면 아군. 한쪽이라도 ICombatInterface가 없거나 태그가 비어 있으면 적으로 간주한다.
+	if (!FirstActor->Implements<UCombatInterface>() || !SecondActor->Implements<UCombatInterface>())
+	{
+		return true;
+	}
+
+	const FGameplayTag FirstTeam = ICombatInterface::Execute_GetTeamTag(FirstActor);
+	const FGameplayTag SecondTeam = ICombatInterface::Execute_GetTeamTag(SecondActor);
+
+	if (!FirstTeam.IsValid() || !SecondTeam.IsValid())
+	{
+		return true;
+	}
+
+	return FirstTeam != SecondTeam;
 }
 
 FAttackContext UMagicultAbilitySystemLibrary::GetAttackContextFromEffectContext(FGameplayEffectContextHandle ContextHandle)

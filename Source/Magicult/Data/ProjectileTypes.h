@@ -145,7 +145,7 @@ struct FSpellFastShotFeatureSpec
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feature|Fast")
-	float AdditinalSpeed = 0.f;
+	float AdditionalSpeed = 0.f;
 };
 
 USTRUCT(BlueprintType)
@@ -284,7 +284,7 @@ struct FSpellModifierConfig
 	float LifeSpanMultiplier = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	bool bFriendlyFire = false;
+	bool bTargetEnemiesOnly = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
 	bool bTracking = false;
@@ -354,7 +354,7 @@ struct FResolvedSpellProjectileSpec
 	float LifeSpanMultiplier = 1.0f;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
-	bool bFriendlyFire = false;
+	bool bTargetEnemiesOnly = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Resolved|Modifier")
 	bool bTracking = false;

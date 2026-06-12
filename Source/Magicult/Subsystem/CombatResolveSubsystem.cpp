@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "CombatResolveSubsystem.h"
@@ -46,13 +46,13 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 	Resolved.InitialSpeed = UMagicultAbilitySystemLibrary::GetTagToFloatData(this, InSpellState.SpeedTag);
 
 	AActor* SourceActor = nullptr;
-	if (InSpellContext.SourceAbilitySystemComponent.Get())
+	if (UAbilitySystemComponent* SourceASC = InSpellContext.SourceAbilitySystemComponent.Get())
 	{
-		SourceActor = InSpellContext.SourceAbilitySystemComponent->GetAvatarActor();
-	}
-	if (!SourceActor)
-	{
-		SourceActor = InSpellContext.SourceAbilitySystemComponent->GetOwnerActor();
+		SourceActor = SourceASC->GetAvatarActor();
+		if (!SourceActor)
+		{
+			SourceActor = SourceASC->GetOwnerActor();
+		}
 	}
 	if (SourceActor)
 	{
@@ -118,7 +118,7 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 			switch (AmmoSpec->FeatureType)
 			{
 			case ESpellProjectileFeatureType::FastShot:
-				Resolved.InitialSpeed += AmmoSpec->FastShotSpec.AdditinalSpeed;
+				Resolved.InitialSpeed += AmmoSpec->FastShotSpec.AdditionalSpeed;
 				break;
 			case ESpellProjectileFeatureType::Pierce:
 				Resolved.bCanHitSameTargetAgain = AmmoSpec->PierceSpec.bCanHitSameTargetAgain;
@@ -170,7 +170,7 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 		Resolved.SizeScale *= Config->SizeScale;
 		Resolved.GravityScale = FMath::Min(Resolved.GravityScale, Config->GravityScaleOverride);
 		Resolved.LifeSpanMultiplier *= Config->LifeSpanMultiplier;
-		if (Config->bFriendlyFire) Resolved.bFriendlyFire = true;
+		if (Config->bTargetEnemiesOnly) Resolved.bTargetEnemiesOnly = true;
 		if (Config->bTracking && !Resolved.bTracking)
 		{
 			Resolved.bTracking = true;
@@ -212,6 +212,12 @@ bool UCombatResolveSubsystem::ResolveElementInteraction(const FSpellContext& InS
 
 	UMagicultAbilitySystemLibrary::GetElementReactionRules(this, ReactionRules);
 
+	// Priority 내림차순 정렬. StableSort라서 동순위 규칙은 DataAsset 배열 순서를 유지한다.
+	ReactionRules.StableSort([](const FElementReactionRule& A, const FElementReactionRule& B)
+		{
+			return A.Priority > B.Priority;
+		});
+
 	for (const FElementReactionRule& Rule : ReactionRules)
 	{
 		if (!Rule.IncomingElementTag.IsValid()
@@ -239,7 +245,7 @@ bool UCombatResolveSubsystem::ResolveElementInteraction(const FSpellContext& InS
 		{
 			ElementInteractionResolveResult.RemoveTags.AddUnique(Rule.ExistingTag);
 		}
-		// 상호작용은 한번에 하나만 허용, 우선순위는 Data Array 순서 기반
+		// 상호작용은 한 번에 하나만 허용. Priority 내림차순으로 첫 매칭 규칙만 적용된다.
 		return Rule.bApplyDebuff;
 	}
 
@@ -278,12 +284,11 @@ void UCombatResolveSubsystem::ResolveElementDebuff(const FSpellContext& InSpellC
 		DebuffSpec.DebuffTag = Rule.DebuffTag;
 		DebuffSpec.EffectSpecs = Rule.EffectSpecs;
 
-		FSpellActionSpec DubuffAction;
-		//DubuffAction.ActionTag
-		DubuffAction.ActionType = ESpellActionType::ApplyDebuff;
-		DubuffAction.DebuffSpec = DebuffSpec;
+		FSpellActionSpec DebuffAction;
+		DebuffAction.ActionType = ESpellActionType::ApplyDebuff;
+		DebuffAction.DebuffSpec = DebuffSpec;
 
-		ElementInteractionResolveResult.DebuffActionRequests.Emplace(DubuffAction, InSpellContext);
+		ElementInteractionResolveResult.DebuffActionRequests.Emplace(DebuffAction, InSpellContext);
 	}
 }
 
@@ -295,7 +300,7 @@ TArray<FSpellActionExecutionRequest> UCombatResolveSubsystem::ResolveInterrupt(
 	const UMagicultGameInstance* GI = GetWorld()->GetGameInstance<UMagicultGameInstance>();
 	if (!GI || !GI->InterruptPolicy)
 	{
-		UE_LOG(LogTemp, Fatal, TEXT("[InterruptPolicy] GameInstance에 InterruptPolicy가 설정되지 않았습니다."));
+		UE_LOG(LogTemp, Error, TEXT("[InterruptPolicy] GameInstance에 InterruptPolicy가 설정되지 않았습니다. 인터럽트 없음으로 처리합니다."));
 		return Requests;
 	}
 

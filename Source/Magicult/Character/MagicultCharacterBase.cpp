@@ -179,6 +179,11 @@ bool AMagicultCharacterBase::IsDead_Implementation() const
 	return bDead;
 }
 
+FGameplayTag AMagicultCharacterBase::GetTeamTag_Implementation() const
+{
+	return TeamTag;
+}
+
 void AMagicultCharacterBase::MulticastHandleDeath_Implementation()
 {
 	Weapon->SetSimulatePhysics(true);
