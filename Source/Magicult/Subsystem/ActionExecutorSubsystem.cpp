@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "ActionExecutorSubsystem.h"
@@ -33,28 +33,31 @@ TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TA
 		PendingExecutionQueue.Enqueue(ExecutionRequest);
 	}
 
-	int32 ChainDepth = 0;
-	const int32 MaxChainDepth = 8;
+	static constexpr int32 MaxActionChainDepth = 8;
 
 	while (!PendingExecutionQueue.IsEmpty())
 	{
-		if (ChainDepth > MaxChainDepth)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("SpellExecutor: MaxChainDepth exceeded."));
-			break;
-		}
-
 		FSpellActionExecutionRequest CurrentExecutionRequest;
 		PendingExecutionQueue.Dequeue(CurrentExecutionRequest);
-		++ChainDepth;
+
+		// 깊이 초과 요청만 개별 스킵 - 같은 배치의 독립 요청들은 영향 없음.
+		// 순환(예: 원소 반응이 또 원소 반응을 생성)은 깊이로만 자라므로 여기서 잡힌다.
+		if (CurrentExecutionRequest.ChainDepth > MaxActionChainDepth)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ActionExecutor: MaxActionChainDepth(%d) exceeded. ActionType=%d"),
+				MaxActionChainDepth, static_cast<int32>(CurrentExecutionRequest.Action.ActionType));
+			continue;
+		}
 
 		const FSpellActionSpec& CurrentAction = CurrentExecutionRequest.Action;
 		const FSpellContext& CurrentContext = CurrentExecutionRequest.Context;
 
 		FSpellActionExecutionResult Result = ExecuteSingleAction(CurrentAction, CurrentContext);
 
-		for (const FSpellActionExecutionRequest& GeneratedRequest : Result.GeneratedActionRequests)
+		// 파생 요청에 부모 깊이 +1 전파
+		for (FSpellActionExecutionRequest GeneratedRequest : Result.GeneratedActionRequests)
 		{
+			GeneratedRequest.ChainDepth = CurrentExecutionRequest.ChainDepth + 1;
 			PendingExecutionQueue.Enqueue(GeneratedRequest);
 		}
 
@@ -69,8 +72,10 @@ TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TA
 			if (UCombatResolveSubsystem* CRS = GetWorld()->GetSubsystem<UCombatResolveSubsystem>())
 			{
 				TArray<FSpellActionExecutionRequest> InterruptRequests = CRS->ResolveInterrupt(Result.ResultTag, CurrentContext);
-				for (const FSpellActionExecutionRequest& Req : InterruptRequests)
+				for (FSpellActionExecutionRequest Req : InterruptRequests)
 				{
+					// 인터럽트도 파생 요청이므로 깊이 +1
+					Req.ChainDepth = CurrentExecutionRequest.ChainDepth + 1;
 					PendingExecutionQueue.Enqueue(Req);
 				}
 			}
@@ -88,7 +93,7 @@ bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpe
 	const UMagicultGameInstance* GI = GetWorld()->GetGameInstance<UMagicultGameInstance>();
 	if (!GI || !GI->ImmunityPolicy)
 	{
-		UE_LOG(LogTemp, Fatal, TEXT("[ImmunityPolicy] GameInstance에 ImmunityPolicy가 설정되지 않았습니다."));
+		UE_LOG(LogTemp, Error, TEXT("[ImmunityPolicy] GameInstance에 ImmunityPolicy가 설정되지 않았습니다. 면역 없음으로 처리합니다."));
 		return false;
 	}
 
@@ -101,8 +106,8 @@ bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpe
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
 {
 	// 액션 권한 분리:
-	//   코스메틱(Niagara·Cue) — 서버/클라 모두 실행하되, 전용 서버는 렌더러가 없으므로 스킵
-	//   권위(Damage·GE·Knockback 등) — 서버 전용. 클라이언트는 게임 상태 변경 불가
+	//   코스메틱(Niagara·Cue) - 서버/클라 모두 실행하되, 전용 서버는 렌더러가 없으므로 스킵
+	//   권위(Damage·GE·Knockback 등) - 서버 전용. 클라이언트는 게임 상태 변경 불가
 	// TriggerQueue 자체는 서버·클라이언트 양쪽에서 처리되며,
 	// 각 머신은 자신에게 허용된 액션 타입만 실행한다.
 	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
@@ -183,6 +188,17 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 	if (!TargetASC)
 	{
 		return FSpellActionExecutionResult(false);
+	}
+
+	if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
+	{
+		if (Provider->GetAttackSpec().bTargetEnemiesOnly)
+		{
+			AActor* SourceActor = Context.SourceActor.Get();
+			AActor* TargetActor = Context.TargetActor.Get();
+			if (SourceActor && TargetActor && !UMagicultAbilitySystemLibrary::IsNotFriend(SourceActor, TargetActor))
+				return FSpellActionExecutionResult(false);
+		}
 	}
 
 	const bool bAppliedDamage = UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(Context, SourceASC, TargetASC, IsRadialDamage);
@@ -267,6 +283,12 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const 
 		FCollisionShape::MakeSphere(RadialDamageSpec.Radius),
 		QueryParams);
 
+	bool bTargetEnemiesOnly = false;
+	if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
+	{
+		bTargetEnemiesOnly = Provider->GetAttackSpec().bTargetEnemiesOnly;
+	}
+
 	if (bHasOverlap)
 	{
 		TSet<TWeakObjectPtr<AActor>> ProcessedActors;
@@ -280,6 +302,13 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const 
 			}
 
 			ProcessedActors.Add(TargetActor);
+
+			if (bTargetEnemiesOnly)
+			{
+				AActor* SourceActor = Context.SourceActor.Get();
+				if (SourceActor && !UMagicultAbilitySystemLibrary::IsNotFriend(SourceActor, TargetActor))
+					continue;
+			}
 
 			UAbilitySystemComponent* TargetASC =
 				UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
@@ -315,13 +344,13 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteResolveElementInter
 {
 	FSpellActionExecutionResult Result;
 
-	UCombatResolveSubsystem* CombatresolveSubsystem = GetWorld()->GetSubsystem<UCombatResolveSubsystem>();
-	if (!CombatresolveSubsystem)
+	UCombatResolveSubsystem* CombatResolveSubsystem = GetWorld()->GetSubsystem<UCombatResolveSubsystem>();
+	if (!CombatResolveSubsystem)
 	{
 		return Result;
 	}
 
-	FElementInteractionResolveResult ElementInteractionResolveResult = CombatresolveSubsystem->ResolveIncomingElement(Context, ApplyElementSpec.IncomingElement);
+	FElementInteractionResolveResult ElementInteractionResolveResult = CombatResolveSubsystem->ResolveIncomingElement(Context, ApplyElementSpec.IncomingElement);
 
 	Result.GeneratedActionRequests.Append(ElementInteractionResolveResult.InteractionActionRequests);
 	Result.GeneratedActionRequests.Append(ElementInteractionResolveResult.DebuffActionRequests);
@@ -456,13 +485,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSpawnActor(const FS
 	FSpellActionExecutionResult Result;
 
 	UWorld* World = GetWorld();
-	if (!World || SpawnActorSpec.ActorClass.IsNull())
-	{
-		return Result;
-	}
-
-	UClass* ActorClass = SpawnActorSpec.ActorClass.LoadSynchronous();
-	if (!ActorClass)
+	UClass* ActorClass = SpawnActorSpec.ActorClass;
+	if (!World || !ActorClass)
 	{
 		return Result;
 	}
@@ -477,9 +501,9 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSpawnActor(const FS
 	{
 		BaseTransform = FTransform(Context.HitResult.ImpactNormal.Rotation(), Context.HitResult.ImpactPoint);
 	}
-	else if (AActor* DamageCaurserActor = Cast<AActor>(Context.DamageCauser.Get()))
+	else if (AActor* DamageCauserActor = Cast<AActor>(Context.DamageCauser.Get()))
 	{
-		BaseTransform = DamageCaurserActor->GetActorTransform();
+		BaseTransform = DamageCauserActor->GetActorTransform();
 	}
 	else if (Context.SourceActor.IsValid())
 	{

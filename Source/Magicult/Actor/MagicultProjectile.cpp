@@ -88,12 +88,11 @@ void AMagicultProjectile::SetProjectileSpawnData(const FSpellContext& InSpellCon
 	AttackSpec.bUseVelocityDamage = true;
 	AttackSpec.DamageModifier = Spec.DamageModifier;
 
-	bFriendlyFire = Spec.bFriendlyFire;
+	AttackSpec.bTargetEnemiesOnly = Spec.bTargetEnemiesOnly;
 
 	ProjectileClientInitData.SizeScale = Spec.SizeScale;
 	ProjectileClientInitData.GravityScale = Spec.GravityScale;
 	ProjectileClientInitData.LifeSpanMultiplier = Spec.LifeSpanMultiplier;
-	ProjectileClientInitData.bFriendlyFire = Spec.bFriendlyFire;
 	ProjectileClientInitData.bTracking = Spec.bTracking;
 	ProjectileClientInitData.TrackingSearchRadius = Spec.TrackingSearchRadius;
 	ProjectileClientInitData.HomingAccelerationMagnitude = Spec.HomingAccelerationMagnitude;
@@ -160,7 +159,6 @@ void AMagicultProjectile::InitializeProjectile()
 		SetLifeSpan(LifeSpan);
 	}
 
-	bFriendlyFire = ProjectileClientInitData.bFriendlyFire;
 
 	if (ProjectileClientInitData.bTracking && HasAuthority() && ProjectileMovement)
 	{
@@ -270,13 +268,10 @@ void AMagicultProjectile::UnbindCollisionEvents()
 	}
 }
 
-bool AMagicultProjectile::IsValidImpact(AActor* OtherActor)
+bool AMagicultProjectile::IsValidImpact(AActor* SourceAvatarActor, AActor* OtherActor) const
 {
-	if (SpellContext.SourceAbilitySystemComponent == nullptr) return false;
-	AActor* SourceAvatarActor = SpellContext.SourceAbilitySystemComponent->GetAvatarActor();
+	if (!SourceAvatarActor || !OtherActor) return false;
 	if (SourceAvatarActor == OtherActor) return false;
-	if (!bFriendlyFire && !UMagicultAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor)) return false;
-
 	return true;
 }
 
@@ -362,7 +357,9 @@ void AMagicultProjectile::HandleGuardedOverlap(const FGuardedOverlapEvent& Overl
 	AActor* OtherActor = OverlapEvent.OtherActor;
 	UPrimitiveComponent* OtherComp = OverlapEvent.OtherComponent;
 
-	if (!OtherActor || !IsValidImpact(OtherActor))
+	AActor* SourceAvatar = SpellContext.SourceAbilitySystemComponent.IsValid()
+		? SpellContext.SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
+	if (!OtherActor || !IsValidImpact(SourceAvatar, OtherActor))
 	{
 		return;
 	}
@@ -391,7 +388,9 @@ void AMagicultProjectile::HandleGuardedOverlap(const FGuardedOverlapEvent& Overl
 
 void AMagicultProjectile::HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (!OtherActor || OtherActor == this)
+	AActor* SourceAvatar = SpellContext.SourceAbilitySystemComponent.IsValid()
+		? SpellContext.SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
+	if (!OtherActor || !IsValidImpact(SourceAvatar, OtherActor))
 	{
 		return;
 	}

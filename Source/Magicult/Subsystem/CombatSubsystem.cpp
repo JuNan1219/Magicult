@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "CombatSubsystem.h"
@@ -97,51 +97,47 @@ void UCombatSubsystem::FlushPendingCleanup()
 
 void UCombatSubsystem::ProcessTriggerQueue()
 {
-    int32 ChainDepth = 0;
-    const int32 MaxChainDepth = 8;
+    static constexpr int32 MaxChainDepth = 8;
 
     while (!TriggerQueue.IsEmpty())
     {
-        // 무한루프 방지
-        if (ChainDepth > MaxChainDepth)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("SpellTrigger: MaxChainDepth exceeded. TriggerTag=%s"), *TriggerQueue.Peek()->TriggerTag.ToString());
-            break;
-        }
-
         FSpellTriggerEventData Trigger;
         TriggerQueue.Dequeue(Trigger);
 
-        FSpellContext ExecutionContext = Trigger.SpellContext;
-        
-        //ExecutionContext.TriggerEventTag = Trigger.EventTags;
+        // 깊이 초과 트리거는 skip - break가 아니라 continue로 큐를 끝까지 소진한다.
+        // (독립적인 원본 트리거들이 누락되지 않도록)
+        if (Trigger.ChainDepth > MaxChainDepth)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("SpellTrigger: MaxChainDepth(%d) exceeded. TriggerTag=%s"),
+                MaxChainDepth, *Trigger.TriggerTag.ToString());
+            continue;
+        }
 
         if (!Trigger.SpellContext.DamageCauser.IsValid()) continue;
 
-        TArray<FSpellActionSpec> Actions;
         IActionSourceInterface* ActionSourceInterface = Cast<IActionSourceInterface>(Trigger.SpellContext.DamageCauser);
-
         if (!ActionSourceInterface) continue;
 
+        TArray<FSpellActionSpec> Actions;
         FSpellTriggerMatcher::CollectActions(ActionSourceInterface->GetTriggerActionBindings(), Trigger, Actions);
 
         UActionExecutorSubsystem* Executor = GetWorld()->GetSubsystem<UActionExecutorSubsystem>();
         TArray<FSpellActionExecutionRequest> ExecutionRequests;
-        for (const auto& Action : Actions)
+        for (const FSpellActionSpec& Action : Actions)
         {
             FSpellActionExecutionRequest ExecutionRequest;
             ExecutionRequest.Context = Trigger.SpellContext;
             ExecutionRequest.Action = Action;
-
             ExecutionRequests.Add(ExecutionRequest);
         }
-        
-        TArray<FSpellTriggerEventData> GeneratedTrigger = Executor->ExecuteRequest(ExecutionRequests);
 
-        for (const FSpellTriggerEventData& NewTrigger : GeneratedTrigger)
+        TArray<FSpellTriggerEventData> GeneratedTriggers = Executor->ExecuteRequest(ExecutionRequests);
+
+        // 파생 트리거에 부모 깊이 +1을 실어 전파
+        for (FSpellTriggerEventData NewTrigger : GeneratedTriggers)
         {
+            NewTrigger.ChainDepth = Trigger.ChainDepth + 1;
             TriggerQueue.Enqueue(NewTrigger);
-            ChainDepth++;
         }
     }
 }

@@ -53,5 +53,9 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	bool IsDead() const;
 
+	// 피아식별용 파벌 태그. 같은 태그를 반환하는 대상끼리는 아군으로 판정한다.
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	FGameplayTag GetTeamTag() const;
+
 	virtual void Die() = 0;
 };
