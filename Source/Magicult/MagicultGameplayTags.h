@@ -63,6 +63,10 @@ public:
 	FGameplayTag Character_State_MagicMode;
 	FGameplayTag Character_State_Dead;
 
+	// 피아식별 파벌. 같은 태그면 아군. BP 기본값에서 지정한다.
+	FGameplayTag Character_Team_Player;
+	FGameplayTag Character_Team_Enemy;
+
 	FGameplayTag Character_Modifier_DamageModifier;
 
 	// 캐릭터 입력 모드

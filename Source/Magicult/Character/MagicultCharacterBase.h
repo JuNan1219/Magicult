@@ -38,6 +38,7 @@ public:
 	virtual void Die() override;
 	virtual bool IsDead_Implementation() const override;
 	virtual const TArray<FAttackDefinition> GetAttackDefinitions_Implementation(const FGameplayTag& InputTag) override;
+	virtual FGameplayTag GetTeamTag_Implementation() const override;
 	/** end Combat Interface */
 	/** Magic Interface */
 	virtual UMagicComponent* GetMagicComponent_Implementation() override;
@@ -48,6 +49,10 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TArray<FTaggedAttackDefinitions> TaggedAttackDefinitions;
+
+	// 피아식별 파벌 태그. BP 기본값에서 Character.Team.Player / Character.Team.Enemy 지정.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+	FGameplayTag TeamTag;
 protected:
 	virtual void BeginPlay() override;
 
