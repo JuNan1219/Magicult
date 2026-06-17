@@ -108,9 +108,19 @@ public:
 	void DeactivateMagicCircle();
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Magic")
+	void ClearSpellState();
+
 protected:
 	virtual void BeginPlay() override;
 private:
 	UPROPERTY(EditAnywhere, Category = "Magic")
 	TObjectPtr<UMagicCircleInfo> MagicCircleMaterials;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
+
+	void UpdateMagicCircleSpeed(const FGameplayTag& SpeedTag);
+	void UpdateMagicCircleDirection(const FGameplayTag& DirectionTag);
 };

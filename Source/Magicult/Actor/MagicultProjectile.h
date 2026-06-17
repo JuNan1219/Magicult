@@ -10,7 +10,7 @@
 #include "Magicult/Interface/ActionSourceInterface.h"
 #include "Magicult/Interface/AttackContextProvider.h"
 #include "Magicult/Interface/CombatRuntimeObject.h"
-#include "Magicult/Component/OverlapTriggerGuardComponent.h"
+#include "Magicult/Component/CollisionGuardComponent.h"
 #include "MagicultProjectile.generated.h"
 
 class UProjectileMovementComponent;
@@ -39,6 +39,9 @@ struct FProjectileClientInitData
 
 	UPROPERTY()
 	ESpellCollisionEventPolicy ColliderEventPolicy = ESpellCollisionEventPolicy::None;
+
+	UPROPERTY()
+	float Bounciness = 1.f;
 
 	UPROPERTY()
 	float SizeScale = 1.0f;
@@ -77,7 +80,7 @@ public:
 	TObjectPtr<UNiagaraComponent> NiagaraComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<UOverlapTriggerGuardComponent> OverlapGuard;
+	TObjectPtr<UCollisionGuardComponent> CollisionGuard;
 
 	UPROPERTY(Replicated)
 	FSpellContext SpellContext;
@@ -136,7 +139,7 @@ private:
 	void ConfigureCollisionForPolicy(ESpellCollisionEventPolicy Policy);
 
 	UFUNCTION()
-	void HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEvent);
+	void HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent);
 
 	UFUNCTION()
 	void HandleHit(
@@ -145,6 +148,9 @@ private:
 		UPrimitiveComponent* OtherComp,
 		FVector NormalImpulse,
 		const FHitResult& Hit);
+
+	UFUNCTION()
+	void HandleProjectileBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity);
 
 	bool bExpired = false;
 	void Expire();

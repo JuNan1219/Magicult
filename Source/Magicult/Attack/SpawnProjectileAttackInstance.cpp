@@ -36,7 +36,6 @@ bool USpawnProjectileAttackInstance::ConvertTagsToProjectileData(const FSpellSta
         !CurrentSpellState.AmmoTypeTagPair.Tag.IsValid())
         return false;
 
-
     OutResolvedSpellProjectileResult = GetWorld()->GetSubsystem<UCombatResolveSubsystem>()->ResolveProjectile(OutSpellContext, CurrentSpellState);
 
     return true;

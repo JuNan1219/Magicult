@@ -196,8 +196,12 @@ void UMagicultAbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 		}
 		else if(FMagicultGameplayTags::Get().Magic_Type_Passive.MatchesTagExact(Info.AbilityType))
 		{
-			// 패시브 버튼 활성화
-			ClientUpdateAbilityStatus(Info.AbilityTag, FMagicultGameplayTags::Get().Magic_Status_Eligible, 1);
+			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Info.Ability, 1);
+			AbilitySpec.DynamicAbilityTags.AddTag(FMagicultGameplayTags::Get().Magic_Status_Unlocked);
+			MarkAbilitySpecDirty(AbilitySpec);
+			FGameplayAbilitySpecHandle SpecHandle = GiveAbility(AbilitySpec);
+			TryActivateAbility(SpecHandle);
+			ClientUpdateAbilityStatus(Info.AbilityTag, FMagicultGameplayTags::Get().Magic_Status_Unlocked, 1);
 		}
 	}
 	

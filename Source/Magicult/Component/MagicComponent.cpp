@@ -40,8 +40,10 @@ void UMagicComponent::HandleSpellStateChange(FSpellState Current)
 	// TODO
 	// 엘리먼트 태그에 맞게 마법진 메테리얼 변경
 	SetMagicCircleMaterialByTag(Current.ElementTagPair.Tag);
+	UpdateMagicCircleSpeed(Current.SpeedTag);
+	UpdateMagicCircleDirection(Current.DirectionTag);
 	// 디렉션 태그에 맞게 마법진 위치 변경
-	
+
 	// EffectTags들에 맞게 마법진 모양 변경~ 가능하다면
 }
 
@@ -115,13 +117,10 @@ void UMagicComponent::AddSpellEffectTags(const FGameplayTag& EffectTag, int32 Le
 
 void UMagicComponent::SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag)
 {
-	if (!MagicCircleMaterials && !MagicCircle) return;
+	if (!MagicCircleMaterials || !MagicCircle) return;
 	FCircleInfo Info = MagicCircleMaterials->FindMagicCircleInfoForTag(ElementTag);
-	
-	if (Info.ElementMaterial)
-	{
-		MagicCircle->SetMaterial(0, Info.ElementMaterial);
-	}
+	DynamicMaterial = UMaterialInstanceDynamic::Create(Info.ElementMaterial, this);
+	MagicCircle->SetMaterial(0, DynamicMaterial);
 }
 
 void UMagicComponent::ActivateMagicCircle()
@@ -134,4 +133,49 @@ void UMagicComponent::DeactivateMagicCircle()
 {
 	if(MagicCircle)
 		MagicCircle->SetVisibility(false);
+}
+
+void UMagicComponent::UpdateMagicCircleSpeed(const FGameplayTag& SpeedTag)
+{
+	if (!DynamicMaterial) return;
+
+	const FMagicultGameplayTags& Tags = FMagicultGameplayTags::Get();
+
+	static const TMap<FGameplayTag, float> SpeedMap =
+	{
+		{ Tags.Magic_Speed_0, 0.f },
+		{ Tags.Magic_Speed_1, 0.2f },
+		{ Tags.Magic_Speed_2, 0.4f },
+		{ Tags.Magic_Speed_3, 0.6f },
+		{ Tags.Magic_Speed_4, 0.8f },
+	};
+
+	const float* Found = SpeedMap.Find(SpeedTag);
+	DynamicMaterial->SetScalarParameterValue(FName("Speed"), Found ? *Found : 0.f);
+}
+
+void UMagicComponent::UpdateMagicCircleDirection(const FGameplayTag& DirectionTag)
+{
+	if (!MagicCircle) return;
+
+	const FMagicultGameplayTags& Tags = FMagicultGameplayTags::Get();
+
+	static const TMap<FGameplayTag, float> DirectionMap =
+	{
+		{ Tags.Magic_Direction_0, 0.f },
+		{ Tags.Magic_Direction_1, 15.f },
+		{ Tags.Magic_Direction_2, 30.f },
+		{ Tags.Magic_Direction_3, 45.f },
+		{ Tags.Magic_Direction_4, 60.f },
+	};
+
+	const float* Found = DirectionMap.Find(DirectionTag);
+	const float Pitch = Found ? *Found : 0.f;
+	MagicCircle->SetRelativeRotation(FRotator(Pitch, 0.f, 0.f));
+}
+
+void UMagicComponent::ClearSpellState()
+{
+	CurrentSpellState.Clear();
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
 }

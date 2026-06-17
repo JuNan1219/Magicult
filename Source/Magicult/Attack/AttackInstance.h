@@ -37,7 +37,7 @@ public:
 
 	void SetSocketTag(FGameplayTag InSocketTag);
 
-	virtual void SetInstanceConfig(UAttackInstanceConfig* InConfig);
+	void SetInstanceConfig(UAttackInstanceConfig* InConfig);
 
 	void Execute();
 	UFUNCTION(BlueprintCallable)
@@ -74,6 +74,7 @@ public:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite ,Category = "AttackInstance")
 	FGameplayTag SocketTag;
 protected:
+	virtual void InitializeWithConfig() {}
 	UFUNCTION(BlueprintNativeEvent)
 	void OnExecuteStarted();
 	virtual void OnExecuteStarted_Implementation();

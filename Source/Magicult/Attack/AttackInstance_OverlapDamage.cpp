@@ -32,20 +32,9 @@ void UAttackInstance_OverlapDamage::HandleEventTag_Implementation(const FGamepla
 	}
 }
 
-void UAttackInstance_OverlapDamage::SetInstanceConfig(UAttackInstanceConfig* InConfig)
-{
-	Config = Cast<UOverlapDamageConfig>(InConfig);
-}
-
 void UAttackInstance_OverlapDamage::OnExecuteStarted_Implementation()
 {
 	Super::OnExecuteStarted_Implementation();
-
-	if (!ensure(Config))
-	{
-		Finish();
-		return;
-	}
 
 	CreateOverlapCollider();
 	if (OverlapActor.IsValid())
@@ -67,7 +56,7 @@ void UAttackInstance_OverlapDamage::OnFinishedInternal_Implementation()
 
 void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 {
-	if (!Config || !OverlapActorClass)
+	if (!OverlapActorClass)
 	{
 		return;
 	}
@@ -109,6 +98,6 @@ void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 			return;
 		}
 
-		OverlapActor->InitializeWithConfig(Context, Config, TriggerActionBindings, AttackSpec, true);
+		OverlapActor->InitializeWithConfig(Context, Cast<UOverlapDamageConfig>(AttackConfig), TriggerActionBindings, AttackSpec, true);
 	}
 }

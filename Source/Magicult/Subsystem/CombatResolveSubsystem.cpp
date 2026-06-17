@@ -127,6 +127,8 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 				break;
 			case ESpellProjectileFeatureType::Bounce:
 				OutRuntimeState.RemainingBounceCount = AmmoSpec->BounceSpec.MaxBounceCount;
+				Resolved.CollisionEventPolicy = ESpellCollisionEventPolicy::Bounce;
+				Resolved.Bounciness = AmmoSpec->BounceSpec.Restitution;
 				break;
 			case ESpellProjectileFeatureType::Explosive:
 				if (AmmoSpec->ExplosionSpec.CommonActionSet)
@@ -166,16 +168,30 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 			[&](const FSpellModifierConfig& C) { return C.ModifierTag == Tag; });
 		if (!Config) continue;
 
-		Resolved.DamageModifier *= Config->DamageMultiplier;
-		Resolved.SizeScale *= Config->SizeScale;
-		Resolved.GravityScale = FMath::Min(Resolved.GravityScale, Config->GravityScaleOverride);
-		Resolved.LifeSpanMultiplier *= Config->LifeSpanMultiplier;
-		if (Config->bTargetEnemiesOnly) Resolved.bTargetEnemiesOnly = true;
-		if (Config->bTracking && !Resolved.bTracking)
+		switch (Config->ModifierType)
 		{
-			Resolved.bTracking = true;
-			Resolved.TrackingSearchRadius = Config->TrackingSearchRadius;
-			Resolved.HomingAccelerationMagnitude = Config->HomingAccelerationMagnitude;
+		case ESpellModifierType::SizeUp:
+			Resolved.SizeScale *= Config->SizeScale;
+			break;
+		case ESpellModifierType::LongLife:
+			Resolved.LifeSpanMultiplier *= Config->LifeSpanMultiplier;
+			break;
+		case ESpellModifierType::ZeroGravity:
+			Resolved.GravityScale = FMath::Min(Resolved.GravityScale, Config->GravityScaleOverride);
+			break;
+		case ESpellModifierType::Friendly:
+			Resolved.bTargetEnemiesOnly = true;
+			break;
+		case ESpellModifierType::Tracking:
+			if (!Resolved.bTracking)
+			{
+				Resolved.bTracking = true;
+				Resolved.TrackingSearchRadius = Config->TrackingSpec.SearchRadius;
+				Resolved.HomingAccelerationMagnitude = Config->TrackingSpec.HomingAccelerationMagnitude;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 

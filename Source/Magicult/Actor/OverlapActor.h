@@ -8,7 +8,7 @@
 #include "Magicult/Interface/ActionSourceInterface.h"
 #include "Magicult/Interface/AttackContextProvider.h"
 #include "Magicult/Interface/CombatRuntimeObject.h"
-#include "Magicult/Component/OverlapTriggerGuardComponent.h"
+#include "Magicult/Component/CollisionGuardComponent.h"
 #include "OverlapActor.generated.h"
 
 class USphereComponent;
@@ -36,7 +36,7 @@ public:
 	void SetAttackSpec(const FAttackSpec& InAttackSpec);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<UOverlapTriggerGuardComponent> OverlapGuard;
+	TObjectPtr<UCollisionGuardComponent> CollisionGuard;
 
 	UPROPERTY(Replicated)
 	FSpellContext SpellContext;
@@ -46,8 +46,11 @@ public:
 
 	virtual UPrimitiveComponent* GetCollider_Implementation();
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void DrawDebug();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bDrawDebug = false;
+
+	UFUNCTION(BlueprintCallable)
+	void DrawDebug(bool bEnabled);
 
 	/** 오버랩 활성/비활성 */
 	UFUNCTION(BlueprintCallable)
@@ -88,7 +91,7 @@ protected:
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
 private:
 	UFUNCTION()
-	void HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEvent);
+	void HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent);
 	void UnbindOverlapGuard();
 
 	UPROPERTY()

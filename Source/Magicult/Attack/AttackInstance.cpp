@@ -28,6 +28,7 @@ void UAttackInstance::SetSocketTag(FGameplayTag InSocketTag)
 void UAttackInstance::SetInstanceConfig(UAttackInstanceConfig* InConfig)
 {
 	AttackConfig = InConfig;
+	InitializeWithConfig();
 }
 
 UWorld* UAttackInstance::GetWorld() const
