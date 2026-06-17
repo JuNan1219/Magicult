@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AttackInstance.h"
+#include "OverlapDamageConfig.h"
 #include "MeleeAttackInstance.generated.h"
 
 /**
@@ -18,12 +19,16 @@ public:
 	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag) override;
 
 protected:
+	virtual void InitializeWithConfig() override;
+
 	bool TryCollectTargets(TArray<AActor*>& OutTargets) const;
 	bool IsValidMeleeTarget(AActor* TargetActor) const;
 	void FireHitTrigger(const FSpellContext& NewContext) const;
 
 protected:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bDrawDebug = false;
+
 	float AttackRadius = 40.f;
 
 	UPROPERTY()

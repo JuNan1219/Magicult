@@ -82,7 +82,6 @@ void AMagicultCharacterBase::InitAbilityActorInfo()
 
 		// 이미 값이 들어와 있을 수 있으니 현재값 1회 적용
 		ApplyCurrentMaxSpeed();
-
 	}
 }
 

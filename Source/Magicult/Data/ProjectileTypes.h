@@ -263,37 +263,55 @@ struct FSpellRuntimeState
 	}
 };
 
+UENUM(BlueprintType)
+enum class ESpellModifierType : uint8
+{
+	None,
+	SizeUp,
+	LongLife,
+	ZeroGravity,
+	Friendly,
+	Tracking,
+};
+
+USTRUCT(BlueprintType)
+struct FTrackingModifierSpec
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier|Tracking")
+	float SearchRadius = 1000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier|Tracking")
+	float HomingAccelerationMagnitude = 3000.0f;
+};
+
 USTRUCT(BlueprintType)
 struct FSpellModifierConfig
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	ESpellModifierType ModifierType = ESpellModifierType::None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
 	FGameplayTag ModifierTag;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	float DamageMultiplier = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier",
+		meta = (EditCondition = "ModifierType == ESpellModifierType::SizeUp", EditConditionHides))
 	float SizeScale = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	float GravityScaleOverride = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier",
+		meta = (EditCondition = "ModifierType == ESpellModifierType::LongLife", EditConditionHides))
 	float LifeSpanMultiplier = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	bool bTargetEnemiesOnly = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier",
+		meta = (EditCondition = "ModifierType == ESpellModifierType::ZeroGravity", EditConditionHides))
+	float GravityScaleOverride = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	bool bTracking = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	float TrackingSearchRadius = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier")
-	float HomingAccelerationMagnitude = 3000.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifier",
+		meta = (EditCondition = "ModifierType == ESpellModifierType::Tracking", EditConditionHides))
+	FTrackingModifierSpec TrackingSpec;
 };
 
 USTRUCT(BlueprintType)
@@ -337,6 +355,9 @@ struct FResolvedSpellProjectileSpec
 
 	UPROPERTY(BlueprintReadOnly, Category = "Resolved")
 	ESpellCollisionEventPolicy CollisionEventPolicy = ESpellCollisionEventPolicy::None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resolved")
+	float Bounciness = 1.f;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Resolved", meta = (TitleProperty = "BindingTag"))
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;

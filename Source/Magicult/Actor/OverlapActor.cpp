@@ -17,7 +17,7 @@ AOverlapActor::AOverlapActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
-	OverlapGuard = CreateDefaultSubobject<UOverlapTriggerGuardComponent>(TEXT("OverlapGuard"));
+	CollisionGuard = CreateDefaultSubobject<UCollisionGuardComponent>(TEXT("CollisionGuard"));
 }
 
 void AOverlapActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -43,7 +43,7 @@ void AOverlapActor::InitializeWithConfig_Implementation(const FSpellContext& InC
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Config 설정이 없습니다 Owner : %s, this : %s"), *GetOwner()->GetName(), *GetName());
 	}
-	OverlapGuard->bCanHitSameTargetAgain = Config->bCanHitSameTargetAgain;
+	CollisionGuard->bCanHitSameTargetAgain = Config->bCanHitSameTargetAgain;
 
 	if (bOverrideAttackSpec)
 	{
@@ -110,6 +110,7 @@ void AOverlapActor::PrepareCleanup_Implementation()
 
 	SetActorEnableCollision(false);
 
+	if (bDrawDebug) DrawDebug(false);
 	SetActorHiddenInGame(true);
 	SetActorTickEnabled(false);
 
@@ -125,17 +126,17 @@ void AOverlapActor::PrepareCleanup_Implementation()
 
 void AOverlapActor::UnbindOverlapGuard()
 {
-	if (OverlapGuard)
+	if (CollisionGuard)
 	{
-		OverlapGuard->OnGuardedOverlap.RemoveDynamic(
+		CollisionGuard->OnGuardedCollision.RemoveDynamic(
 			this,
-			&AOverlapActor::HandleGuardedOverlap
+			&AOverlapActor::HandleGuardedCollision
 		);
 
-		OverlapGuard->ResetGuard();
-		OverlapGuard->SetCollisionComponent(nullptr);
-		OverlapGuard->Deactivate();
-		OverlapGuard->SetComponentTickEnabled(false);
+		CollisionGuard->ResetGuard();
+		CollisionGuard->SetCollisionComponent(nullptr);
+		CollisionGuard->Deactivate();
+		CollisionGuard->SetComponentTickEnabled(false);
 	}
 }
 
@@ -149,8 +150,10 @@ void AOverlapActor::BeginPlay()
 		ensure(GetCollider());
 		return;
 	}
-	OverlapGuard->SetCollisionComponent(GetCollider());
-	OverlapGuard->OnGuardedOverlap.AddDynamic(this, &AOverlapActor::HandleGuardedOverlap);
+	CollisionGuard->SetCollisionComponent(GetCollider());
+	CollisionGuard->OnGuardedCollision.AddDynamic(this, &AOverlapActor::HandleGuardedCollision);
+
+	if (bDrawDebug) DrawDebug(true);
 }
 
 UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()
@@ -158,10 +161,18 @@ UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()
 	return nullptr;
 }
 
-void AOverlapActor::HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEvent)
+void AOverlapActor::DrawDebug(bool bEnabled)
 {
-	AActor* OtherActor = OverlapEvent.OtherActor;
-	UPrimitiveComponent* OtherComp = OverlapEvent.OtherComponent;
+	if (UPrimitiveComponent* Collider = GetCollider())
+	{
+		Collider->SetHiddenInGame(!bEnabled);
+	}
+}
+
+void AOverlapActor::HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent)
+{
+	AActor* OtherActor = CollisionEvent.OtherActor;
+	UPrimitiveComponent* OtherComp = CollisionEvent.OtherComponent;
 
 	if (!OtherActor)
 	{
@@ -176,9 +187,9 @@ void AOverlapActor::HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEven
 	}
 
 	FSpellContext NewContext = SpellContext;
-	
-	NewContext.HitResult = OverlapEvent.SweepResult;
-	NewContext.bHasHitResult = OverlapEvent.bFromSweep;
+
+	NewContext.HitResult = CollisionEvent.HitResult;
+	NewContext.bHasHitResult = CollisionEvent.bFromSweep;
 	NewContext.TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
 	NewContext.TargetActor = OtherActor;
 

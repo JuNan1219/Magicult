@@ -23,7 +23,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AOverlapActor> OverlapActorClass;
 
-	virtual void SetInstanceConfig(UAttackInstanceConfig* InConfig) override;
 protected:
 	virtual void OnExecuteStarted_Implementation() override;
 	virtual void OnFinishedInternal_Implementation() override;
@@ -32,9 +31,6 @@ protected:
 	void CreateOverlapCollider();
 
 private:
-	UPROPERTY()
-	TObjectPtr<UOverlapDamageConfig> Config;
-
 	UPROPERTY()
 	TWeakObjectPtr<AOverlapActor> OverlapActor;
 };

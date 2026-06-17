@@ -6,9 +6,18 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "OverlapDamageConfig.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
+
+void UMeleeAttackInstance::InitializeWithConfig()
+{
+	if (const UOverlapDamageConfig* OverlapConfig = Cast<UOverlapDamageConfig>(AttackConfig))
+	{
+		AttackRadius = OverlapConfig->CollisionConfig.SphereRadius;
+	}
+}
 
 void UMeleeAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag)
 {
@@ -67,7 +76,7 @@ bool UMeleeAttackInstance::TryCollectTargets(TArray<AActor*>& OutTargets) const
 	}
 
 	FCollisionShape Shape = FCollisionShape::MakeSphere(AttackRadius);
-	
+
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(MeleeAttackOverlap), false, Source);
 
 	TArray<FOverlapResult> Overlaps;
@@ -79,6 +88,8 @@ bool UMeleeAttackInstance::TryCollectTargets(TArray<AActor*>& OutTargets) const
 		Shape,
 		Params
 	);
+
+	if (bDrawDebug) DrawDebugSphere(World, Center, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.0f);
 
 	if (!bHit)
 	{

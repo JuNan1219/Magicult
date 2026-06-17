@@ -27,7 +27,7 @@ AMagicultProjectile::AMagicultProjectile()
 	ProjectileMovement->bRotationFollowsVelocity = true;
 
 	NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
-	OverlapGuard = CreateDefaultSubobject<UOverlapTriggerGuardComponent>(TEXT("OverlapGuard"));
+	CollisionGuard = CreateDefaultSubobject<UCollisionGuardComponent>(TEXT("CollisionGuard"));
 }
 
 void AMagicultProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -81,6 +81,7 @@ void AMagicultProjectile::SetProjectileSpawnData(const FSpellContext& InSpellCon
 	ProjectileClientInitData.ProjectileNiagara = Spec.ProjectileNiagara;
 	ProjectileClientInitData.ProjectileCollider = Spec.ProjectileCollider;
 	ProjectileClientInitData.ColliderEventPolicy = Spec.CollisionEventPolicy;
+	ProjectileClientInitData.Bounciness = Spec.Bounciness;
 
 	AttackSpec.BaseDamage = Spec.BaseDamage;
 	AttackSpec.ElementTag = Spec.ElementTag;
@@ -126,7 +127,7 @@ void AMagicultProjectile::InitializeProjectile()
 	bProjectileInitialized = true;
 	SpellContext.DamageCauser = this;
 
-	OverlapGuard->SetCollisionComponent(Collider);
+	CollisionGuard->SetCollisionComponent(Collider);
 	ApplyColliderSpec(ProjectileClientInitData.ProjectileCollider);
 	if (NiagaraComponent)
 	{
@@ -167,7 +168,7 @@ void AMagicultProjectile::InitializeProjectile()
 			this,
 			GetActorLocation(),
 			ProjectileClientInitData.TrackingSearchRadius,
-			TArray<TEnumAsByte<EObjectTypeQuery>>(),
+			TArray<TEnumAsByte<EObjectTypeQuery>>{ EObjectTypeQuery::ObjectTypeQuery3 },
 			nullptr,
 			TArray<AActor*>{ GetOwner() },
 			OverlappingActors
@@ -246,17 +247,17 @@ void AMagicultProjectile::UnbindCollisionEvents()
 {
 	UPrimitiveComponent* Collider = GetCollider();
 
-	if (OverlapGuard)
+	if (CollisionGuard)
 	{
-		OverlapGuard->OnGuardedOverlap.RemoveDynamic(
+		CollisionGuard->OnGuardedCollision.RemoveDynamic(
 			this,
-			&AMagicultProjectile::HandleGuardedOverlap
+			&AMagicultProjectile::HandleGuardedCollision
 		);
 
-		OverlapGuard->ResetGuard();
-		OverlapGuard->SetCollisionComponent(nullptr);
-		OverlapGuard->Deactivate();
-		OverlapGuard->SetComponentTickEnabled(false);
+		CollisionGuard->ResetGuard();
+		CollisionGuard->SetCollisionComponent(nullptr);
+		CollisionGuard->Deactivate();
+		CollisionGuard->SetComponentTickEnabled(false);
 	}
 
 	if (Collider)
@@ -266,12 +267,19 @@ void AMagicultProjectile::UnbindCollisionEvents()
 			&AMagicultProjectile::HandleHit
 		);
 	}
+
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->OnProjectileBounce.RemoveDynamic(
+			this,
+			&AMagicultProjectile::HandleProjectileBounce
+		);
+	}
 }
 
 bool AMagicultProjectile::IsValidImpact(AActor* SourceAvatarActor, AActor* OtherActor) const
 {
-	if (!SourceAvatarActor || !OtherActor) return false;
-	if (SourceAvatarActor == OtherActor) return false;
+	if (!OtherActor) return false;
 	return true;
 }
 
@@ -290,16 +298,21 @@ void AMagicultProjectile::BindCollisionPolicy(ESpellCollisionEventPolicy Policy)
 		break;
 
 	case ESpellCollisionEventPolicy::OverlapOnly:
-		OverlapGuard->OnGuardedOverlap.AddDynamic(this, &AMagicultProjectile::HandleGuardedOverlap);
+		CollisionGuard->OnGuardedCollision.AddDynamic(this, &AMagicultProjectile::HandleGuardedCollision);
 		break;
 
 	case ESpellCollisionEventPolicy::HitOnly:
-	case ESpellCollisionEventPolicy::Bounce:
 		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
 		break;
 
+	case ESpellCollisionEventPolicy::Bounce:
+		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
+		if (ProjectileMovement)
+			ProjectileMovement->OnProjectileBounce.AddDynamic(this, &ThisClass::HandleProjectileBounce);
+		break;
+
 	case ESpellCollisionEventPolicy::OverlapAndHit:
-		OverlapGuard->OnGuardedOverlap.AddDynamic(this, &AMagicultProjectile::HandleGuardedOverlap);
+		CollisionGuard->OnGuardedCollision.AddDynamic(this, &AMagicultProjectile::HandleGuardedCollision);
 		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
 		break;
 	default:
@@ -337,8 +350,16 @@ void AMagicultProjectile::ConfigureCollisionForPolicy(ESpellCollisionEventPolicy
 	{
 	case ESpellCollisionEventPolicy::HitOnly:
 	case ESpellCollisionEventPolicy::OverlapAndHit:
+		Collider->SetNotifyRigidBodyCollision(true);
+		Collider->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		Collider->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+		break;
+
 	case ESpellCollisionEventPolicy::Bounce:
 		Collider->SetNotifyRigidBodyCollision(true);
+		Collider->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		Collider->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+		Collider->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 		break;
 
 	default:
@@ -347,15 +368,18 @@ void AMagicultProjectile::ConfigureCollisionForPolicy(ESpellCollisionEventPolicy
 
 	if (ProjectileMovement)
 	{
-		// Bounce 정책일 때만 bounce 활성화
-		ProjectileMovement->bShouldBounce = (Policy == ESpellCollisionEventPolicy::Bounce);
+		const bool bBounce = (Policy == ESpellCollisionEventPolicy::Bounce);
+		ProjectileMovement->bShouldBounce = bBounce;
+		ProjectileMovement->BounceVelocityStopSimulatingThreshold = bBounce ? 20.f : 0.f;
+		if (bBounce)
+			ProjectileMovement->Bounciness = ProjectileClientInitData.Bounciness;
 	}
 }
 
-void AMagicultProjectile::HandleGuardedOverlap(const FGuardedOverlapEvent& OverlapEvent)
+void AMagicultProjectile::HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent)
 {
-	AActor* OtherActor = OverlapEvent.OtherActor;
-	UPrimitiveComponent* OtherComp = OverlapEvent.OtherComponent;
+	AActor* OtherActor = CollisionEvent.OtherActor;
+	UPrimitiveComponent* OtherComp = CollisionEvent.OtherComponent;
 
 	AActor* SourceAvatar = SpellContext.SourceAbilitySystemComponent.IsValid()
 		? SpellContext.SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
@@ -373,8 +397,8 @@ void AMagicultProjectile::HandleGuardedOverlap(const FGuardedOverlapEvent& Overl
 
 	FSpellContext NewContext = SpellContext;
 
-	NewContext.HitResult = OverlapEvent.SweepResult;
-	NewContext.bHasHitResult = OverlapEvent.bFromSweep;
+	NewContext.HitResult = CollisionEvent.HitResult;
+	NewContext.bHasHitResult = CollisionEvent.bFromSweep;
 	NewContext.TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
 	NewContext.TargetActor = OtherActor;
 
@@ -406,6 +430,24 @@ void AMagicultProjectile::HandleHit(UPrimitiveComponent* HitComponent, AActor* O
 	NewContext.TargetActor = OtherActor;
 
 	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_Hit, TriggerTag, NewContext);
+}
+
+void AMagicultProjectile::HandleProjectileBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
+{
+	if (!HasAuthority()) return;
+
+	FSpellRuntimeState& RuntimeState = ResolvedProjectileResult.RuntimeState;
+	RuntimeState.RemainingBounceCount = FMath::Max(0, RuntimeState.RemainingBounceCount - 1);
+
+	if (RuntimeState.RemainingBounceCount <= 0)
+	{
+		UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(
+			this,
+			FMagicultGameplayTags::Get().Trigger_Projectile_Depleted,
+			FGameplayTagContainer(),
+			SpellContext
+		);
+	}
 }
 
 FAttackSpec AMagicultProjectile::GetAttackSpec() const
