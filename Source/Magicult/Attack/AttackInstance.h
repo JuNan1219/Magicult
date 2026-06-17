@@ -48,9 +48,9 @@ public:
 	bool IsActive() const { return bActive; }
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-	void HandleEventTag(const FGameplayTag& EventTag);
+	void HandleEventTag(FGameplayTag EventTag);
 
-	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag);
+	virtual void HandleEventTag_Implementation(FGameplayTag EventTag);
 
 	FOnAttackInstanceFinished OnFinished;
 

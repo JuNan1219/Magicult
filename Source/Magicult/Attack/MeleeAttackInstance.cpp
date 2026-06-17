@@ -21,7 +21,7 @@ void UMeleeAttackInstance::InitializeWithConfig()
 	}
 }
 
-void UMeleeAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag)
+void UMeleeAttackInstance::HandleEventTag_Implementation(FGameplayTag EventTag)
 {
 	Super::HandleEventTag_Implementation(EventTag);
 
