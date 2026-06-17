@@ -160,6 +160,8 @@ void UMagicultDamageGameplayAbility::CleanupAttackInstance()
 // 핸들러
 // ---------------------------------------------------------------
 
+// 몽타주 AnimNotify → SendGameplayEventToActor → WaitGameplayEvent 경로 전용.
+// 그 외(Task 델리게이트 등)는 CurrentAttackInstance->HandleEventTag() 직접 호출.
 void UMagicultDamageGameplayAbility::HandleMontageGameplayEvent(FGameplayEventData Payload)
 {
 	if (CurrentAttackInstance)
