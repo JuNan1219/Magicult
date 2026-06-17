@@ -110,7 +110,9 @@ void AOverlapActor::PrepareCleanup_Implementation()
 
 	SetActorEnableCollision(false);
 
+#if !UE_BUILD_SHIPPING
 	if (bDrawDebug) DrawDebug(false);
+#endif
 	SetActorHiddenInGame(true);
 	SetActorTickEnabled(false);
 
@@ -153,7 +155,9 @@ void AOverlapActor::BeginPlay()
 	CollisionGuard->SetCollisionComponent(GetCollider());
 	CollisionGuard->OnGuardedCollision.AddDynamic(this, &AOverlapActor::HandleGuardedCollision);
 
+#if !UE_BUILD_SHIPPING
 	if (bDrawDebug) DrawDebug(true);
+#endif
 }
 
 UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()
@@ -163,10 +167,12 @@ UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()
 
 void AOverlapActor::DrawDebug(bool bEnabled)
 {
+#if !UE_BUILD_SHIPPING
 	if (UPrimitiveComponent* Collider = GetCollider())
 	{
 		Collider->SetHiddenInGame(!bEnabled);
 	}
+#endif
 }
 
 void AOverlapActor::HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent)

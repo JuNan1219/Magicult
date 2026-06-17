@@ -3,7 +3,9 @@
 #include "MeleeAttackInstance.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
+#if !UE_BUILD_SHIPPING
 #include "DrawDebugHelpers.h"
+#endif
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "OverlapDamageConfig.h"
@@ -89,7 +91,9 @@ bool UMeleeAttackInstance::TryCollectTargets(TArray<AActor*>& OutTargets) const
 		Params
 	);
 
+#if !UE_BUILD_SHIPPING
 	if (bDrawDebug) DrawDebugSphere(World, Center, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.0f);
+#endif
 
 	if (!bHit)
 	{
