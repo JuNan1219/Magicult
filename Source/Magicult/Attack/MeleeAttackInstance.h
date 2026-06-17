@@ -16,7 +16,7 @@ class MAGICULT_API UMeleeAttackInstance : public UAttackInstance
 	GENERATED_BODY()
 	
 public:
-	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag) override;
+	virtual void HandleEventTag_Implementation(FGameplayTag EventTag) override;
 
 protected:
 	virtual void InitializeWithConfig() override;
