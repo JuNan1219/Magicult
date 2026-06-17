@@ -19,7 +19,7 @@ class MAGICULT_API USpawnProjectileAttackInstance : public UAttackInstance
 {
 	GENERATED_BODY()
 public:
-	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag);
+	virtual void HandleEventTag_Implementation(FGameplayTag EventTag);
 private:
 	bool ConvertTagsToProjectileData(const FSpellState& CurrentSpellState, FSpellContext& OutSpellContext, FResolvedSpellProjectileResult& OutResolvedSpellProjectileResult);
 	bool CheckSpellState(const FSpellState& CurrentSpellState);

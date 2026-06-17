@@ -18,7 +18,7 @@ class MAGICULT_API UAttackInstance_OverlapDamage : public UAttackInstance
 	GENERATED_BODY()
 	
 public:
-	virtual void HandleEventTag_Implementation(const FGameplayTag& EventTag) override;
+	virtual void HandleEventTag_Implementation(FGameplayTag EventTag) override;
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AOverlapActor> OverlapActorClass;

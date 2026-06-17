@@ -13,7 +13,7 @@
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/MagicultGameplayTags.h"
 
-void USpawnProjectileAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag)
+void USpawnProjectileAttackInstance::HandleEventTag_Implementation(FGameplayTag EventTag)
 {
     Super::HandleEventTag_Implementation(EventTag);
     

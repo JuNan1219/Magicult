@@ -9,7 +9,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 
-void UAttackInstance_OverlapDamage::HandleEventTag_Implementation(const FGameplayTag& EventTag)
+void UAttackInstance_OverlapDamage::HandleEventTag_Implementation(FGameplayTag EventTag)
 {
 	if (!bActive || bFinishing)
 	{

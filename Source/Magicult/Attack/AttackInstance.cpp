@@ -75,7 +75,7 @@ void UAttackInstance::OnExecuteStarted_Implementation()
 {
 }
 
-void UAttackInstance::HandleEventTag_Implementation(const FGameplayTag& EventTag)
+void UAttackInstance::HandleEventTag_Implementation(FGameplayTag EventTag)
 {
 	if (!bActive || bFinishing)
 	{
