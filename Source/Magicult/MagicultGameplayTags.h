@@ -51,6 +51,7 @@ public:
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
 	FGameplayTag InputTag_5;
+	FGameplayTag InputTag_Dash;
 
 	FGameplayTag InputTag_Detail_1;
 	FGameplayTag InputTag_Detail_2;
@@ -62,6 +63,10 @@ public:
 
 	FGameplayTag Character_State_MagicMode;
 	FGameplayTag Character_State_Dead;
+	FGameplayTag Character_State_Dashing;
+
+	// 쿨다운 (GE가 부여 → CanActivateAbility가 존재 여부로 발동 차단)
+	FGameplayTag Cooldown_Dash;
 
 	// 피아식별 파벌. 같은 태그면 아군. BP 기본값에서 지정한다.
 	FGameplayTag Character_Team_Player;

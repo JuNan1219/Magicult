@@ -119,6 +119,11 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		TEXT("키보드 숫자 5")
 	);
 
+	GameplayTags.InputTag_Dash = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("InputTag.Dash"),
+		TEXT("대시 입력")
+	);
+
 	// Magic Detail Tag
 	GameplayTags.InputTag_Detail_1 = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("InputTag.Detail.1"),
@@ -154,6 +159,14 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Character_State_Dead = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Character.State.Dead"),
 		TEXT("")
+	);
+	GameplayTags.Character_State_Dashing = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Character.State.Dashing"),
+		TEXT("대시 중. 중복/교차 차단 및 반응 트리거용")
+	);
+	GameplayTags.Cooldown_Dash = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Cooldown.Dash"),
+		TEXT("대시 쿨다운")
 	);
 
 	GameplayTags.Character_Modifier_DamageModifier = UGameplayTagsManager::Get().AddNativeGameplayTag(
