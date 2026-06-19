@@ -155,9 +155,7 @@ void AOverlapActor::BeginPlay()
 	CollisionGuard->SetCollisionComponent(GetCollider());
 	CollisionGuard->OnGuardedCollision.AddDynamic(this, &AOverlapActor::HandleGuardedCollision);
 
-#if !UE_BUILD_SHIPPING
-	if (bDrawDebug) DrawDebug(true);
-#endif
+
 }
 
 UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()
@@ -231,10 +229,18 @@ void AOverlapActor::EnableOverlap()
 {
 	GetCollider()->SetGenerateOverlapEvents(true);
 	GetCollider()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+#if !UE_BUILD_SHIPPING
+	if (bDrawDebug) DrawDebug(true);
+#endif
 }
 
 void AOverlapActor::DisableOverlap()
 {
 	GetCollider()->SetGenerateOverlapEvents(false);
 	GetCollider()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+#if !UE_BUILD_SHIPPING
+	if (bDrawDebug) DrawDebug(false);
+#endif
 }

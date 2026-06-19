@@ -21,7 +21,7 @@ public:
     FMoveAlongArcSimpleDelegate OnEndPhase;
 
     UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (DisplayName = "Move Along Arc", HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "true"))
-    static UAbilityTask_MoveAlongArc* MoveAlongArc(UGameplayAbility* OwningAbility, FVector InStartLocation, FVector InEndLocation, float InDuration, float InArcHeight, float EndPhaseThreshold);
+    static UAbilityTask_MoveAlongArc* MoveAlongArc(UGameplayAbility* OwningAbility, FVector InStartLocation, FVector InEndLocation, float InDuration, float InArcHeight, float EndPhaseThreshold, bool bInDrawDebug = false);
 
     virtual void Activate() override;
     virtual void TickTask(float DeltaTime) override;
@@ -42,4 +42,5 @@ protected:
     float EndPhaseThreshold = 0.8f;
 
     bool bIsEndPhase = false;
+    bool bDrawDebug = false;
 };

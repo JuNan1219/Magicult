@@ -4,8 +4,11 @@
 #include "AbilityTask_MoveAlongArc.h"
 #include "Abilities/GameplayAbility.h"
 #include "GameFramework/Actor.h"
+#if !UE_BUILD_SHIPPING
+#include "DrawDebugHelpers.h"
+#endif
 
-UAbilityTask_MoveAlongArc* UAbilityTask_MoveAlongArc::MoveAlongArc(UGameplayAbility* OwningAbility, FVector InStartLocation, FVector InEndLocation, float InDuration, float InArcHeight, float EndPhaseThreshold)
+UAbilityTask_MoveAlongArc* UAbilityTask_MoveAlongArc::MoveAlongArc(UGameplayAbility* OwningAbility, FVector InStartLocation, FVector InEndLocation, float InDuration, float InArcHeight, float EndPhaseThreshold, bool bInDrawDebug)
 {
     UAbilityTask_MoveAlongArc* Task = NewAbilityTask<UAbilityTask_MoveAlongArc>(OwningAbility);
     Task->StartLocation = InStartLocation;
@@ -13,6 +16,7 @@ UAbilityTask_MoveAlongArc* UAbilityTask_MoveAlongArc::MoveAlongArc(UGameplayAbil
     Task->Duration = FMath::Max(0.01f, InDuration);
     Task->ArcHeight = InArcHeight;
     Task->EndPhaseThreshold = EndPhaseThreshold;
+    Task->bDrawDebug = bInDrawDebug;
     return Task;
 }
 
@@ -25,6 +29,28 @@ void UAbilityTask_MoveAlongArc::Activate()
 
     ElapsedTime = 0.0f;
     bTickingTask = true;
+
+#if !UE_BUILD_SHIPPING
+    if (bDrawDebug)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            const float DrawDuration = Duration + 1.f;
+            const int32 NumSegments = 24;
+            FVector PrevPoint = StartLocation;
+            for (int32 i = 1; i <= NumSegments; i++)
+            {
+                const float A = static_cast<float>(i) / static_cast<float>(NumSegments);
+                const FVector NextPoint = EvaluatePosition(A);
+                DrawDebugLine(World, PrevPoint, NextPoint, FColor::Cyan, false, DrawDuration, 0, 2.f);
+                PrevPoint = NextPoint;
+            }
+            DrawDebugSphere(World, StartLocation, 15.f, 8, FColor::Green, false, DrawDuration);
+            DrawDebugSphere(World, EndLocation, 15.f, 8, FColor::Red, false, DrawDuration);
+            DrawDebugSphere(World, ApexLocation, 10.f, 8, FColor::Yellow, false, DrawDuration);
+        }
+    }
+#endif
 }
 
 void UAbilityTask_MoveAlongArc::TickTask(float DeltaTime)
