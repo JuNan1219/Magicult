@@ -8,6 +8,7 @@
 #include "Magicult/Data/MagicInfo.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
+#include "GameFramework/Actor.h"
 
 void UMagicultAbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -60,6 +61,15 @@ void UMagicultAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag&
 	FGameplayEventData Payload;
 	Payload.EventTag = InputTag;
 	Payload.Instigator = GetAvatarActor();
+
+	// 입력 시점의 아바타 조준(yaw)을 모든 입력 이벤트에 동봉한다.
+	// EventMagnitude는 활성화 RPC(ServerTryActivateAbilityWithEventData)에서 어차피 항상 직렬화되므로
+	// 추가 대역폭이 사실상 0이고, 조준 기반 어빌리티(발사체/빔/대시 등)가 클라/서버 동일 방향을 써서
+	// 핑과 무관하게 발사 방향이 정확해진다. (조준을 안 쓰는 어빌리티는 EventMagnitude를 무시)
+	if (const AActor* Avatar = GetAvatarActor())
+	{
+		Payload.EventMagnitude = Avatar->GetActorRotation().Yaw;
+	}
 
 	//이 함수가 트리거가 일치하는 어빌리티를 찾아 'ActivateAbilityFromEvent'를 실행합니다.
 	//TryActivateAbility를 따로 호출할 필요가 없습니다.
