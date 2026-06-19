@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "ActionExecutorSubsystem.h"
@@ -807,14 +807,13 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 		TSharedPtr<FRootMotionSource_ConstantForce> RMS = MakeShared<FRootMotionSource_ConstantForce>();
 		RMS->InstanceName = FName(TEXT("SpellKnockback"));
-		RMS->AccumulateMode = ERootMotionAccumulateMode::Additive;
+		RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
 		RMS->Priority = 500;
 		RMS->Force = Force;
-		RMS->Duration = 0.1f;
+		RMS->Duration = 0.25f;
 		RMS->StrengthOverTime = nullptr;
-		RMS->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::ClampVelocity;
-		RMS->FinishVelocityParams.ClampVelocity = 0.f;
-		RMS->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
+		// 넉백이 끝나고 관성 유지
+		RMS->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::MaintainLastRootMotionVelocity;
 
 		MoveComp->ApplyRootMotionSource(RMS);
 

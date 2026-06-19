@@ -28,7 +28,8 @@ public:
 		FVector InStartLocation,
 		FVector InTargetLocation,
 		float InMoveDistance,
-		float InAcceptanceRadius = 30.f
+		float InAcceptanceRadius = 30.f,
+		bool bInDrawDebug = false
 	);
 
 	UPROPERTY(BlueprintAssignable)
@@ -73,4 +74,9 @@ protected:
 
 	UPROPERTY()
 	FVector FinalMoveLocation = FVector::ZeroVector;
+
+	bool bDrawDebug = false;
+
+private:
+	void CleanupMoveDelegate();
 };
