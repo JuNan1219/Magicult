@@ -82,3 +82,20 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 		}
 	);
 }
+
+void UOverlayWidgetController::SetModeInputBlocked(bool bBlocked)
+{
+	if (!AbilitySystemComponent) return;
+
+	// 로컬 전용(비복제) 태그: 이 클라이언트의 모드 선택 어빌리티 발동만 막는 UX 게이트라서
+	// 서버에 알릴 필요가 없다. 서버 권한 GE로 적용되는 모드 태그 흐름과는 무관하다.
+	const FGameplayTag BlockTag = FMagicultGameplayTags::Get().Character_State_ModeInputBlocked;
+	if (bBlocked)
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(BlockTag);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveLooseGameplayTag(BlockTag);
+	}
+}
