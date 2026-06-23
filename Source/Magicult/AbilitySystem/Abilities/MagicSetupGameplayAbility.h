@@ -13,7 +13,10 @@ UCLASS()
 class MAGICULT_API UMagicSetupGameplayAbility : public UMagicultGameplayAbility
 {
 	GENERATED_BODY()
-	
+
+public:
+	UMagicSetupGameplayAbility();
+
 protected:
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;	
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };

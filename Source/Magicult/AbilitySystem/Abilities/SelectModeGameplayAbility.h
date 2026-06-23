@@ -19,6 +19,9 @@ class MAGICULT_API USelectModeGameplayAbility : public UMagicultGameplayAbility
 {
 	GENERATED_BODY()
 
+public:
+	USelectModeGameplayAbility();
+
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
