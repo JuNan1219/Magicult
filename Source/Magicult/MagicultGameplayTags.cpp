@@ -164,6 +164,10 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("Character.State.Dashing"),
 		TEXT("대시 중. 중복/교차 차단 및 반응 트리거용")
 	);
+	GameplayTags.Character_State_ModeInputBlocked = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Character.State.ModeInputBlocked"),
+		TEXT("모드 전환 UI 애니메이션 재생 중. 로컬 전용 태그로 SelectModeGameplayAbility 발동을 막는다.")
+	);
 	GameplayTags.Cooldown_Dash = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Cooldown.Dash"),
 		TEXT("대시 쿨다운")
