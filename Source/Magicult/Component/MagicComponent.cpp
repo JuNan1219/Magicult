@@ -10,12 +10,33 @@
 #include "Magicult/Data/ElementDataTypes.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 UMagicComponent::UMagicComponent()
 {
 	MagicCircle = CreateDefaultSubobject<UStaticMeshComponent>("MagicCircle");
 	MagicCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	MagicCircle->SetVisibility(false);
+
+	SetIsReplicatedByDefault(true);
+}
+
+void UMagicComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// 소유 클라는 로컬 예측(IsLocallyControlled)으로 이미 같은 값을 갖고 있어 제외한다.
+	// 몬스터처럼 소유 클라가 없는 액터는 조건과 무관하게 모든 클라에게 복제된다.
+	DOREPLIFETIME_CONDITION(UMagicComponent, CurrentSpellState, COND_SkipOwner);
+
+	// 호출하는 GA도 (HasAuthority || IsLocallyControlled)로 소유 클라에서 로컬 실행되므로,
+	// 소유 클라는 이미 직접 SetVisibility를 호출한 상태다. COND_SkipOwner로 중복/지연 덮어쓰기를 막는다.
+	DOREPLIFETIME_CONDITION(UMagicComponent, bMagicCircleActive, COND_SkipOwner);
+}
+
+void UMagicComponent::OnRep_CurrentSpellState()
+{
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, FGameplayTag());
 }
 
 void UMagicComponent::BeginPlay()
@@ -35,7 +56,7 @@ void UMagicComponent::AttachMagicCircle()
 	}
 }
 
-void UMagicComponent::HandleSpellStateChange(FSpellState Current)
+void UMagicComponent::HandleSpellStateChange(FSpellState Current, FGameplayTag ChangedTag)
 {
 	// TODO
 	// 엘리먼트 태그에 맞게 마법진 메테리얼 변경
@@ -68,7 +89,7 @@ void UMagicComponent::SetSpellTag(const FGameplayTag& AbilityTag, int32 Level)
 	}
 	else if (AbilityTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Magic.Effect"))))
 	{
-		CurrentSpellState.EffectTags.Add(AbilityTag, Level);
+		CurrentSpellState.AddEffectTag(AbilityTag, Level);
 	}
 	else
 	{
@@ -76,43 +97,44 @@ void UMagicComponent::SetSpellTag(const FGameplayTag& AbilityTag, int32 Level)
 		return;
 	}
 	UE_LOG(LogTemp, Warning, TEXT("use magic %s"), *AbilityTag.ToString());
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, AbilityTag);
 }
 
 void UMagicComponent::SetSpellState(const FSpellState& NewSpellState)
 {
 	CurrentSpellState = NewSpellState;
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	// 일괄 교체라 "방금 바뀐 태그" 하나로 특정할 수 없음 — 빈 태그로 전체 갱신을 알린다.
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, FGameplayTag());
 }
 
 void UMagicComponent::SetSpellDirectionTag(const FGameplayTag& DirectionTag)
 {
 	CurrentSpellState.DirectionTag = DirectionTag;
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, DirectionTag);
 }
 
 void UMagicComponent::SetSpellSpeedTag(const FGameplayTag& SpeedTag)
 {
 	CurrentSpellState.SpeedTag = SpeedTag;
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, SpeedTag);
 }
 
 void UMagicComponent::SetSpellElementTag(const FGameplayTag& ElementTag, int32 Level)
 {
 	CurrentSpellState.ElementTagPair = FSpellTagLevelPair(ElementTag, Level);
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, ElementTag);
 }
 
 void UMagicComponent::SetSpellAmmoTypeTag(const FGameplayTag& AmmoTypeTag, int32 Level)
 {
 	CurrentSpellState.AmmoTypeTagPair = FSpellTagLevelPair(AmmoTypeTag, Level);
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, AmmoTypeTag);
 }
 
 void UMagicComponent::AddSpellEffectTags(const FGameplayTag& EffectTag, int32 Level)
 {
-	CurrentSpellState.EffectTags.Add(EffectTag, Level);
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	CurrentSpellState.AddEffectTag(EffectTag, Level);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, EffectTag);
 }
 
 void UMagicComponent::SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag)
@@ -125,14 +147,22 @@ void UMagicComponent::SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag
 
 void UMagicComponent::ActivateMagicCircle()
 {
+	bMagicCircleActive = true;
 	if (MagicCircle)
-	MagicCircle->SetVisibility(true);
+		MagicCircle->SetVisibility(true);
 }
 
 void UMagicComponent::DeactivateMagicCircle()
 {
-	if(MagicCircle)
+	bMagicCircleActive = false;
+	if (MagicCircle)
 		MagicCircle->SetVisibility(false);
+}
+
+void UMagicComponent::OnRep_MagicCircleActive()
+{
+	if (MagicCircle)
+		MagicCircle->SetVisibility(bMagicCircleActive);
 }
 
 void UMagicComponent::UpdateMagicCircleSpeed(const FGameplayTag& SpeedTag)
@@ -177,5 +207,5 @@ void UMagicComponent::UpdateMagicCircleDirection(const FGameplayTag& DirectionTa
 void UMagicComponent::ClearSpellState()
 {
 	CurrentSpellState.Clear();
-	OnChangedCurrentSpellState.Broadcast(CurrentSpellState);
+	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, FGameplayTag());
 }

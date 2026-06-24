@@ -5,65 +5,14 @@
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
 #include "GameplayTagContainer.h"
+#include "Magicult/Data/SpellTypes.h"
 #include "MagicComponent.generated.h"
 
 class UMagicCircleInfo;
 class UAttributeSet;
 class UNiagaraComponent;
 
-USTRUCT(BlueprintType)
-struct FSpellTagLevelPair
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FGameplayTag Tag = FGameplayTag();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Level = 1;
-};
-
-USTRUCT(BlueprintType)
-struct FSpellState
-{
-	GENERATED_BODY()
-
-	// 단일 선택 유형 태그 (FGameplayTag)
-	// (예: 속성, 방향 등 상호 배타적인 하나의 선택)
-
-	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Magic Config")
-	FGameplayTag DirectionTag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
-	FGameplayTag SpeedTag;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
-	FSpellTagLevelPair ElementTagPair; // 예: Spell.Element.Fire
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
-	FSpellTagLevelPair AmmoTypeTagPair;
-
-	// 다중 선택 효과 태그 (FGameplayTagContainer)
-	// (예: 중첩될 수 있는 부가적인 효과나 옵션)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Magic Config")
-	TMap<FGameplayTag, int32> EffectTags;
-
-	void Clear()
-	{
-		DirectionTag = FGameplayTag();
-		SpeedTag = FGameplayTag();
-		ElementTagPair = FSpellTagLevelPair();
-		AmmoTypeTagPair = FSpellTagLevelPair();
-
-		EffectTags.Empty();
-	}
-
-	bool HasEffectTag(FGameplayTag InTag) const
-	{
-		return EffectTags.Contains(InTag);
-	}
-};
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnChangedCurrentSpellState, FSpellState);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnChangedCurrentSpellState, FSpellState, FGameplayTag);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MAGICULT_API UMagicComponent : public USceneComponent
@@ -79,9 +28,17 @@ public:
 	TObjectPtr<UStaticMeshComponent> MagicCircle;
 
 	FOnChangedCurrentSpellState OnChangedCurrentSpellState;
-	void HandleSpellStateChange(FSpellState Current);
+	void HandleSpellStateChange(FSpellState Current, FGameplayTag ChangedTag);
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 서버에서만 갱신되고(권위), 소유 클라는 로컬 예측으로 이미 같은 값을 들고 있어 COND_SkipOwner로 복제한다.
+	// 몬스터처럼 소유 클라가 없는 경우엔 모든 클라에게 복제되어 마법진 비주얼이 보인다.
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentSpellState)
 	FSpellState CurrentSpellState;
+
+	UFUNCTION()
+	void OnRep_CurrentSpellState();
 
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void SetSpellTag(const FGameplayTag& AbilityTag, int32 Level = 1);
@@ -108,6 +65,14 @@ public:
 	void DeactivateMagicCircle();
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void SetMagicCircleMaterialByTag(const FGameplayTag& ElementTag);
+
+	// MagicCircle->SetVisibility는 복제 프로퍼티가 아니라서, 권위 머신(서버)에서만 호출되면
+	// 다른 클라(특히 소유 클라가 없는 몬스터)에는 절대 반영되지 않는다. 이 bool로 대신 복제한다.
+	UPROPERTY(ReplicatedUsing = OnRep_MagicCircleActive)
+	bool bMagicCircleActive = false;
+
+	UFUNCTION()
+	void OnRep_MagicCircleActive();
 
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void ClearSpellState();

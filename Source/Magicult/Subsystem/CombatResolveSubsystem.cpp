@@ -162,8 +162,9 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 	TArray<FSpellModifierConfig> ModifierConfigs;
 	UMagicultAbilitySystemLibrary::GetModifierConfigs(this, ModifierConfigs);
 
-	for (const auto& [Tag, Level] : InSpellState.EffectTags)
+	for (const FSpellTagLevelPair& EffectPair : InSpellState.EffectTags)
 	{
+		const FGameplayTag& Tag = EffectPair.Tag;
 		const FSpellModifierConfig* Config = ModifierConfigs.FindByPredicate(
 			[&](const FSpellModifierConfig& C) { return C.ModifierTag == Tag; });
 		if (!Config) continue;
