@@ -20,7 +20,7 @@ void UMagicSetupGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandl
 
 	// SpellTag 적용은 서버 권위 컴포넌트(MagicComponent) 직접 호출이므로 서버에서만 수행한다.
 	// (LocalPredicted라 클라 카피에서도 본문이 돌지만, 가드로 클라 중복 적용을 막는다.)
-	bool bIsValid = HasAuthority(&ActivationInfo) && ActorInfo != nullptr && IsValid(ActorInfo->AvatarActor.Get()) && ActorInfo->AvatarActor.Get()->Implements<UMagicInterface>();
+	bool bIsValid = (HasAuthority(&ActivationInfo) || ActorInfo->IsLocallyControlled()) && ActorInfo != nullptr && IsValid(ActorInfo->AvatarActor.Get()) && ActorInfo->AvatarActor.Get()->Implements<UMagicInterface>();
 	if (bIsValid)
 	{
 		UMagicComponent* MagicComponent = IMagicInterface::Execute_GetMagicComponent(ActorInfo->AvatarActor.Get());
