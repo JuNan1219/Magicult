@@ -11,6 +11,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Magicult/Character/MagicultCharacterBase.h"
+#include "Magicult/AbilitySystem/Abilities/KnockbackGameplayAbility.h"
 #include "Components/PrimitiveComponent.h"
 #include "Magicult/Actor/MagicultProjectile.h"
 #include "Magicult/Subsystem/CombatResolveSubsystem.h"
@@ -802,6 +803,34 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 	if (Character && MoveComp && !bDead)
 	{
+		// [테스트] 플레이어: GA(LaunchCharacter 버전)로 보낸다.
+		// ServerInitiated → 서버·클라 양쪽이 LaunchCharacter(Force) → 표준 이동 예측 경로로 감속.
+		if (Character->IsPlayerControlled())
+		{
+			if (UAbilitySystemComponent* TargetASC =
+				UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
+			{
+				const FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
+					+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
+
+				FGameplayAbilityTargetData_Knockback* Data = new FGameplayAbilityTargetData_Knockback();
+				Data->Force = Force;
+
+				FGameplayEventData Payload;
+				Payload.EventTag = FMagicultGameplayTags::Get().Action_Knockback;
+				Payload.Instigator = Context.SourceActor.Get();
+				Payload.Target = TargetActor;
+				Payload.TargetData.Add(Data);
+
+				TargetASC->HandleGameplayEvent(Payload.EventTag, &Payload);
+
+				Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
+				return Result;
+			}
+		}
+
+		// 비플레이어(몬스터 등): 오너 클라가 없어 GA 복제 이득이 없다.
+		// 서버 RMS + RepRootMotion(시뮬 프록시 스무딩)으로 충분하므로 기존 ConstantForce 유지.
 		FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
 			+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
 
@@ -810,7 +839,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 		RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
 		RMS->Priority = 500;
 		RMS->Force = Force;
-		RMS->Duration = 0.25f;
+		// LaunchCharacter(플레이어) 임펄스 감속과 비슷하게: 짧게 밀고 관성 유지.
+		RMS->Duration = 0.1f;
 		RMS->StrengthOverTime = nullptr;
 		// 넉백이 끝나고 관성 유지
 		RMS->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::MaintainLastRootMotionVelocity;
@@ -830,8 +860,9 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 		if (Character && bDead)
 		{
+			// 래그돌 impulse를 모든 머신에 멀티캐스트(서버 전용 AddImpulse는 클라 시체가 안 날아감).
 			FName BoneName = Cast<ICombatInterface>(Character)->GetDefaultKnockbackBone();
-			Character->GetMesh()->AddImpulse(Impulse, BoneName, true);
+			Character->MulticastApplyRagdollImpulse(Impulse, BoneName);
 		}
 		else if (UPrimitiveComponent* PrimitiveComp = Cast<UPrimitiveComponent>(TargetActor->GetRootComponent()))
 		{

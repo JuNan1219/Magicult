@@ -4,6 +4,7 @@
 #include "MagicultCharacterBase.h"
 #include "AbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Magicult/Component/MagicComponent.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
@@ -196,8 +197,27 @@ void AMagicultCharacterBase::MulticastHandleDeath_Implementation()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
+	// 카메라(SpringArm) 분리: 래그돌 메시를 따라 카메라가 날아가지 않도록 사망 지점에 고정한다.
+	// 모든 머신에서 돌지만 카메라는 플레이어에만 있어 적에겐 no-op(FindComponentByClass null).
+	if (USpringArmComponent* SpringArm = FindComponentByClass<USpringArmComponent>())
+	{
+		SpringArm->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
+	}
+
 	Dissolve();
 	bDead = true;
+}
+
+void AMagicultCharacterBase::MulticastApplyRagdollImpulse_Implementation(FVector Impulse, FName BoneName)
+{
+	// 래그돌이 아직 활성화 안 됐으면(사망 멀티캐스트 처리 전) 스킵. 보통은 사망 RPC가 먼저 도착한다.
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		if (MeshComp->IsSimulatingPhysics())
+		{
+			MeshComp->AddImpulse(Impulse, BoneName, true);
+		}
+	}
 }
 
 const TArray<FAttackDefinition> AMagicultCharacterBase::GetAttackDefinitions_Implementation(const FGameplayTag& InputTag)
