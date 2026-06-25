@@ -47,6 +47,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath();
 
+	// 사망(래그돌) 상태 넉백 impulse를 모든 머신에서 적용한다.
+	// 래그돌 시뮬은 각 머신이 로컬로 돌리므로 impulse도 멀티캐스트해야 서버/클라 시체가 일관되게 날아간다.
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastApplyRagdollImpulse(FVector Impulse, FName BoneName);
+
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TArray<FTaggedAttackDefinitions> TaggedAttackDefinitions;
 
