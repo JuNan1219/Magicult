@@ -53,7 +53,7 @@ public:
 	static UCharacterClassInfo* GetCharacterClassInfo(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|CharacterClassDefaults")
-	static void InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC);
+	static void InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC, float HealthMultiplier = 1.f);
 
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|CharacterClassDefaults")
 	static void GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
