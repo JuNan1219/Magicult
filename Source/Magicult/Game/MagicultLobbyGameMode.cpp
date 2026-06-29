@@ -3,6 +3,7 @@
 #include "MagicultLobbyGameMode.h"
 #include "Magicult/Player/MagicultLobbyPlayerState.h"
 #include "Magicult/Game/MagicultLobbyGameState.h"
+#include "Magicult/Game/MagicultGameInstance.h"
 #include "Magicult/Character/LobbyCharacter.h"
 
 #include "MultiplayerSessionsSubsystem.h"
@@ -125,6 +126,13 @@ void AMagicultLobbyGameMode::OnStartSessionComplete(bool bWasSuccessful)
 		{
 			MSS->MultiplayerOnStartSessionComplete.RemoveDynamic(this, &ThisClass::OnStartSessionComplete);
 		}
+	}
+
+	// 트래블 직전 현재 인원수를 GameInstance에 기록 → 게임플레이 GameMode가 매치 시작 게이트 분모로 사용.
+	// ServerTravel하면 GameMode는 재생성되지만 GameInstance는 지속되므로 인원수가 보존된다.
+	if (UMagicultGameInstance* MagicultGI = Cast<UMagicultGameInstance>(GetGameInstance()))
+	{
+		MagicultGI->ExpectedPlayerCount = GameState ? GameState->PlayerArray.Num() : 0;
 	}
 
 	if (UWorld* World = GetWorld())

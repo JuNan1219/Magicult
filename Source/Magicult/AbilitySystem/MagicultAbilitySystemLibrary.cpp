@@ -21,6 +21,8 @@
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Actor/OverlapActor.h"
 #include "Magicult/Data/OverlapActorSpawnParam.h"
+#include "Magicult/AbilitySystem/MagicultAttributeSet.h"
+#include "GameplayEffect.h"
 
 TWeakObjectPtr<UTagToData> UMagicultAbilitySystemLibrary::CachedTagToData = nullptr;
 TWeakObjectPtr<UElementInteractionRules> UMagicultAbilitySystemLibrary::CachedElementInteractionRules = nullptr;
@@ -84,7 +86,7 @@ UCharacterClassInfo* UMagicultAbilitySystemLibrary::GetCharacterClassInfo(const 
 	return MagicultGameMode->CharacterClassInfo;
 }
 
-void UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC)
+void UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC, float HealthMultiplier)
 {
 	AActor* AvatarActor = ASC->GetAvatarActor();
 
@@ -110,6 +112,28 @@ void UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* W
 	// 공통
 	ApplyEffectToSelf(CharacterClassInfo->SecondaryAttributes);
 	ApplyEffectToSelf(CharacterClassInfo->VitalAttributes);
+
+	// 인원수 체력 배율. MaxHealth는 다른 속성/modifier 조합으로 구성될 수 있어 base 값만 곱하면
+	// 일부만 스케일된다. 곱연산 무한 GE를 MaxHealth에 적용해 최종 조합값 전체에 배율을 건다.
+	// 배율이 1이거나 비정상(0 이하)이면 스킵 → 플레이어 등 기본 호출자는 영향 없음.
+	if (HealthMultiplier > 0.f && !FMath::IsNearlyEqual(HealthMultiplier, 1.f))
+	{
+		UGameplayEffect* ScaleGE = NewObject<UGameplayEffect>(GetTransientPackage());
+		ScaleGE->DurationPolicy = EGameplayEffectDurationType::Infinite;
+
+		const int32 ModIdx = ScaleGE->Modifiers.Num();
+		ScaleGE->Modifiers.SetNum(ModIdx + 1);
+		FGameplayModifierInfo& ModInfo = ScaleGE->Modifiers[ModIdx];
+		ModInfo.Attribute = UMagicultAttributeSet::GetMaxHealthAttribute();
+		ModInfo.ModifierOp = EGameplayModOp::Multiplicitive;
+		ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(HealthMultiplier));
+
+		ASC->ApplyGameplayEffectToSelf(ScaleGE, 1.f, ASC->MakeEffectContext());
+
+		// 스케일된 최종 MaxHealth로 Health를 풀로 채운다.
+		const float NewMaxHealth = ASC->GetNumericAttribute(UMagicultAttributeSet::GetMaxHealthAttribute());
+		ASC->SetNumericAttributeBase(UMagicultAttributeSet::GetHealthAttribute(), NewMaxHealth);
+	}
 }
 
 void UMagicultAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
