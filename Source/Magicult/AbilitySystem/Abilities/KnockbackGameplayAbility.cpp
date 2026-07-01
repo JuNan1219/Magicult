@@ -6,9 +6,10 @@
 UKnockbackGameplayAbility::UKnockbackGameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	// 넉백은 당하는 동작이라 클라가 예측할 수 없다. 서버가 활성화하고 클라가 따라간다.
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
-	// 넉백 진행 중 새 피격이 오면 덮어쓸 수 있도록 재트리거 허용.
+	// ServerOnly: 서버에서만 넉백을 적용하고, 클라는 CMC 보정으로 결과를 받는다.
+	// (클라도 실행하면 서버 보정 속도와 중복돼 오버런이 나므로 서버 단독 적용.)
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
+	// 넉백 중 새 피격이 오면 덮어쓰도록 재트리거 허용.
 	bRetriggerInstancedAbility = true;
 }
 
@@ -36,26 +37,10 @@ void UKnockbackGameplayAbility::ActivateAbility(
 
 	const FVector& Force = Payload->Force;
 
-	// 서버 LaunchCharacter의 이동(속도) 복제가 GameplayEvent보다 먼저 클라에 도착하는 경우가 있다.
-	// 이때 클라가 또 LaunchCharacter를 적용하면 속도가 중복으로 더해진다.
-	// 현재 속도를 목표 속도(Force)에 내적해 그 값이 |Force|^2의 80% 이상이면
-	// 이미 충분히 반영된 것으로 보고 클라 측 LaunchCharacter를 건너뛴다.
-	// 중력으로 계속 변하는 Z(수직) 속도는 비교에서 제외하고 수평(X, Y)만 본다.
-	if (!Character->HasAuthority())
-	{
-		const FVector2D CurrentVelocity2D(Character->GetVelocity());
-		const FVector2D Force2D(Force);
-		if ((CurrentVelocity2D | Force2D) >= 0.8f * Force2D.SizeSquared())
-		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-			return;
-		}
-	}
-
-	// 일반 CMC 속도 부여. 이후 마찰/감속은 표준 이동 예측 경로가 처리한다.
+	// ServerOnly라 서버에서만 실행. 일반 CMC 속도를 부여하면 클라는 보정으로 받아 반영한다.
 	Character->LaunchCharacter(Force, true, true);
 
-	// 한 방 속도만 부여하면 끝. 어빌리티는 즉시 종료(이후 이동은 CMC가 굴림).
+	// 속도만 한 번 부여하고 종료(이후 이동은 CMC가 굴림).
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
