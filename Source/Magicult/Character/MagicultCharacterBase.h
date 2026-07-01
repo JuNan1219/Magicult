@@ -52,6 +52,10 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastApplyRagdollImpulse(FVector Impulse, FName BoneName);
 
+	// 피격 시 호출(서버). 전투 타이머 GE를 자신에게 적용해 RecentlyDamaged 태그를 갱신한다.
+	// AttributeSet::HandleIncomingDamage에서 호출된다.
+	void ApplyCombatTimeout();
+
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TArray<FTaggedAttackDefinitions> TaggedAttackDefinitions;
 
@@ -92,6 +96,9 @@ protected:
 
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 
+	// 무한+주기 리젠 GE를 서버에서 1회 적용한다. 속성 초기화 이후(자식 클래스의 ASC 초기화 지점) 호출한다.
+	void ApplyHealthRegenEffect();
+
 	virtual void InitializeDefaultAttributes() const;
 
 	void AddCharacterAbilities();
@@ -115,6 +122,23 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
+
+	/*
+	* Health Regen (전투 이탈 시 체력 회복)
+	*/
+
+	// true일 때만 리젠 GE 적용 + 피격 시 전투 타이머 GE(RecentlyDamaged 태그)를 적용한다. 캐릭터별 on/off용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Regen")
+	bool bEnableHealthRegen = true;
+
+	// 무한+주기 GE. Period마다 Health를 회복한다.
+	// Ongoing Tag Requirement로 RecentlyDamaged 보유 시 inhibit되도록 설정해야 한다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Regen")
+	TSubclassOf<UGameplayEffect> HealthRegenEffect;
+
+	// 피격 시 적용되는 Duration GE. RecentlyDamaged 태그를 부여하며 재피격 시 Duration이 리프레시되도록 설정해야 한다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Regen")
+	TSubclassOf<UGameplayEffect> CombatTimeoutEffect;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void ApplyMaxSpeed(float InMaxSpeed);

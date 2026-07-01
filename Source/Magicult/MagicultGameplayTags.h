@@ -65,6 +65,7 @@ public:
 	FGameplayTag Character_State_Dead;
 	FGameplayTag Character_State_Dashing;
 	FGameplayTag Character_State_ModeInputBlocked;
+	FGameplayTag Character_State_RecentlyDamaged;
 
 	// 쿨다운 (GE가 부여 → CanActivateAbility가 존재 여부로 발동 차단)
 	FGameplayTag Cooldown_Dash;

@@ -8,6 +8,7 @@
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Magicult/Interface/CombatInterface.h"
+#include "Magicult/Character/MagicultCharacterBase.h"
 
 UMagicultAttributeSet::UMagicultAttributeSet()
 {
@@ -128,6 +129,15 @@ void UMagicultAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 			if (CombatInterface)
 			{
 				CombatInterface->Die();
+			}
+		}
+		else
+		{
+			// 피격 시 전투 타이머 GE 적용 → RecentlyDamaged 태그 부여 → 체력 리젠 일시 정지/리셋.
+			// 사망 타격에는 적용하지 않는다.
+			if (AMagicultCharacterBase* TargetCharacter = Cast<AMagicultCharacterBase>(Props.TargetAvatarActor))
+			{
+				TargetCharacter->ApplyCombatTimeout();
 			}
 		}
 
