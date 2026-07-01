@@ -60,6 +60,9 @@ void AMagicultCharacter::PossessedBy(AController* NewController)
 
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
+
+	// 속성 초기화(InitAbilityActorInfo→InitializeStartupData) 이후 서버에서 리젠 GE 적용
+	ApplyHealthRegenEffect();
 }
 
 void AMagicultCharacter::OnRep_PlayerState()

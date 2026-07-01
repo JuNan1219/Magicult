@@ -146,6 +146,9 @@ void AMagicultEnemy::InitializeForMatch(float HealthMultiplier)
 	UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, Level, AbilitySystemComponent, HealthMultiplier);
 	UMagicultAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent, CharacterClass);
 
+	// 속성 초기화 이후 서버에서 리젠 GE 적용
+	ApplyHealthRegenEffect();
+
 	bMatchStarted = true;
 	StartBehaviorTree();
 }

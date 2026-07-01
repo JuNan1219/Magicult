@@ -168,6 +168,10 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("Character.State.ModeInputBlocked"),
 		TEXT("모드 전환 UI 애니메이션 재생 중. 로컬 전용 태그로 SelectModeGameplayAbility 발동을 막는다.")
 	);
+	GameplayTags.Character_State_RecentlyDamaged = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Character.State.RecentlyDamaged"),
+		TEXT("최근 피격 상태. GE_CombatTimeout이 부여하며, 보유 중에는 체력 리젠 GE가 inhibit된다.")
+	);
 	GameplayTags.Cooldown_Dash = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("Cooldown.Dash"),
 		TEXT("대시 쿨다운")

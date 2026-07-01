@@ -247,6 +247,24 @@ void AMagicultCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> Game
 	GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), GetAbilitySystemComponent());
 }
 
+void AMagicultCharacterBase::ApplyHealthRegenEffect()
+{
+	if (!HasAuthority()) return;
+	if (!bEnableHealthRegen || !HealthRegenEffect) return;
+	if (!IsValid(GetAbilitySystemComponent())) return;
+
+	ApplyEffectToSelf(HealthRegenEffect, 1.f);
+}
+
+void AMagicultCharacterBase::ApplyCombatTimeout()
+{
+	if (!HasAuthority()) return;
+	if (!bEnableHealthRegen || !CombatTimeoutEffect) return;
+	if (!IsValid(GetAbilitySystemComponent())) return;
+
+	ApplyEffectToSelf(CombatTimeoutEffect, 1.f);
+}
+
 void AMagicultCharacterBase::Dissolve()
 {
 	if (IsValid(DissolveMaterialInstance))
