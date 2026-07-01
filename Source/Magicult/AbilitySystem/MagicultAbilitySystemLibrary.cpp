@@ -113,25 +113,19 @@ void UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* W
 	ApplyEffectToSelf(CharacterClassInfo->SecondaryAttributes);
 	ApplyEffectToSelf(CharacterClassInfo->VitalAttributes);
 
-	// 인원수 체력 배율. MaxHealth는 다른 속성/modifier 조합으로 구성될 수 있어 base 값만 곱하면
-	// 일부만 스케일된다. 곱연산 무한 GE를 MaxHealth에 적용해 최종 조합값 전체에 배율을 건다.
+	// 인원수 체력 배율. Infinite Modifier GE로 배율을 걸면 CurrentValue만 바뀌고 BaseValue는 그대로라,
+	// EGameplayEffectReplicationMode::Minimal인 Enemy ASC에서는 ActiveGameplayEffects 자체가
+	// 클라에 복제되지 않아 클라 로컬 Aggregator가 배율 없는 BaseValue로 CurrentValue를 재계산해버린다
+	// (MaxHealth만 서버-클라 불일치가 나던 원인). SetNumericAttributeBase로 BaseValue 자체에
+	// 스케일된 최종값을 박아 Health와 동일한 방식으로 복제되게 한다.
 	// 배율이 1이거나 비정상(0 이하)이면 스킵 → 플레이어 등 기본 호출자는 영향 없음.
 	if (HealthMultiplier > 0.f && !FMath::IsNearlyEqual(HealthMultiplier, 1.f))
 	{
-		UGameplayEffect* ScaleGE = NewObject<UGameplayEffect>(GetTransientPackage());
-		ScaleGE->DurationPolicy = EGameplayEffectDurationType::Infinite;
-
-		const int32 ModIdx = ScaleGE->Modifiers.Num();
-		ScaleGE->Modifiers.SetNum(ModIdx + 1);
-		FGameplayModifierInfo& ModInfo = ScaleGE->Modifiers[ModIdx];
-		ModInfo.Attribute = UMagicultAttributeSet::GetMaxHealthAttribute();
-		ModInfo.ModifierOp = EGameplayModOp::Multiplicitive;
-		ModInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(HealthMultiplier));
-
-		ASC->ApplyGameplayEffectToSelf(ScaleGE, 1.f, ASC->MakeEffectContext());
+		const float BaseMaxHealth = ASC->GetNumericAttribute(UMagicultAttributeSet::GetMaxHealthAttribute());
+		const float NewMaxHealth = BaseMaxHealth * HealthMultiplier;
+		ASC->SetNumericAttributeBase(UMagicultAttributeSet::GetMaxHealthAttribute(), NewMaxHealth);
 
 		// 스케일된 최종 MaxHealth로 Health를 풀로 채운다.
-		const float NewMaxHealth = ASC->GetNumericAttribute(UMagicultAttributeSet::GetMaxHealthAttribute());
 		ASC->SetNumericAttributeBase(UMagicultAttributeSet::GetHealthAttribute(), NewMaxHealth);
 	}
 }
