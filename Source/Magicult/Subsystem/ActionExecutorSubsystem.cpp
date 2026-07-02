@@ -22,6 +22,7 @@
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Game/MagicultGameInstance.h"
 #include "Magicult/Data/ImmunityPolicy.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 
 TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request)
 {
@@ -179,6 +180,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteConsumePierce(const
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const FSpellContext& Context, bool IsRadialDamage)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteApplyDamage);
 	FSpellActionExecutionResult Result;
 
 	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Damage, Context))
@@ -242,6 +244,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const FSpellRadialDamageActionSpec& RadialDamageSpec, const FSpellContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteRadialDamage);
 	FSpellActionExecutionResult Result;
 
 	UWorld* World = GetWorld();
@@ -276,13 +279,18 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const 
 		QueryParams.AddIgnoredActor(DamageCauserActor);
 	}
 
-	const bool bHasOverlap = World->OverlapMultiByObjectType(
-		OverlapResults,
-		Origin,
-		FQuat::Identity,
-		FCollisionObjectQueryParams::AllDynamicObjects,
-		FCollisionShape::MakeSphere(RadialDamageSpec.Radius),
-		QueryParams);
+	bool bHasOverlap;
+	{
+		// 물리 스피어 오버랩(AllDynamicObjects). 폭발마다 1회 → 연쇄 시 비용 누적 의심 지점.
+		TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_RadialOverlapQuery);
+		bHasOverlap = World->OverlapMultiByObjectType(
+			OverlapResults,
+			Origin,
+			FQuat::Identity,
+			FCollisionObjectQueryParams::AllDynamicObjects,
+			FCollisionShape::MakeSphere(RadialDamageSpec.Radius),
+			QueryParams);
+	}
 
 	bool bTargetEnemiesOnly = false;
 	if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
@@ -343,6 +351,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const 
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteResolveElementInteraction(const FSpellApplyElementActionSpec& ApplyElementSpec, const FSpellContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteResolveElement);
 	FSpellActionExecutionResult Result;
 
 	UCombatResolveSubsystem* CombatResolveSubsystem = GetWorld()->GetSubsystem<UCombatResolveSubsystem>();
@@ -379,6 +388,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteResolveElementInter
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const FSpellDebuffActionSpec& DebuffSpec, const FSpellContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteApplyDebuff);
 	FSpellActionExecutionResult Result;
 
 	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Debuff, Context))
@@ -531,6 +541,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSpawnActor(const FS
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteGameplayEffect(const FSpellApplyGEActionSpec& ApplyGESpec, const FSpellContext& Context)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteGameplayEffect);
 	FSpellActionExecutionResult Result;
 
 	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
