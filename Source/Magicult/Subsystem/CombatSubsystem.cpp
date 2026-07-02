@@ -12,6 +12,28 @@
 #include "Magicult/Subsystem/ActionExecutorSubsystem.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/Interface/ActionSourceInterface.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "ProfilingDebugging/CountersTrace.h"
+
+// TriggerQueue 처리 비용 관측용 계측. Test/Shipping 빌드에서는 엔진이 자동으로 컴파일 아웃한다.
+//
+// 두 경로로 내보낸다:
+//  1) `stat Magicult` 오버레이 + Insights Timing(stats 채널) : DECLARE_*_STAT / SCOPE_CYCLE_COUNTER
+//  2) Insights Counters 트랙 (counters 채널)                : TRACE_DECLARE_INT_COUNTER / TRACE_COUNTER_SET
+//     (레거시 STAT 카운터는 Counters 트랙으로 흐르지 않으므로 별도로 필요하다)
+DECLARE_STATS_GROUP(TEXT("Magicult"), STATGROUP_Magicult, STATCAT_Advanced);
+
+DECLARE_CYCLE_STAT(TEXT("ProcessTriggerQueue (drain)"), STAT_Magicult_ProcessTriggerQueue, STATGROUP_Magicult);
+DECLARE_CYCLE_STAT(TEXT("  CollectActions"), STAT_Magicult_CollectActions, STATGROUP_Magicult);
+DECLARE_CYCLE_STAT(TEXT("  ExecuteRequest"), STAT_Magicult_ExecuteRequest, STATGROUP_Magicult);
+
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers processed / frame"), STAT_Magicult_TriggersProcessed, STATGROUP_Magicult);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers generated / frame"), STAT_Magicult_TriggersGenerated, STATGROUP_Magicult);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Max chain depth / frame"), STAT_Magicult_MaxChainDepth, STATGROUP_Magicult);
+
+TRACE_DECLARE_INT_COUNTER(Magicult_TriggersProcessed, TEXT("Magicult/Triggers Processed"));
+TRACE_DECLARE_INT_COUNTER(Magicult_TriggersGenerated, TEXT("Magicult/Triggers Generated"));
+TRACE_DECLARE_INT_COUNTER(Magicult_MaxChainDepth, TEXT("Magicult/Max Chain Depth"));
 
 void UCombatSubsystem::Tick(float DeltaTime)
 {
@@ -97,7 +119,15 @@ void UCombatSubsystem::FlushPendingCleanup()
 
 void UCombatSubsystem::ProcessTriggerQueue()
 {
+    // 큐 드레인 전체 = Insights CPU 타임라인의 한 이벤트 + `stat Magicult` 의 한 줄.
+    SCOPE_CYCLE_COUNTER(STAT_Magicult_ProcessTriggerQueue);
+    TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ProcessTriggerQueue);
+
     static constexpr int32 MaxChainDepth = 8;
+
+    int32 ProcessedThisFrame = 0;
+    int32 GeneratedThisFrame = 0;
+    int32 MaxDepthThisFrame = 0;
 
     while (!TriggerQueue.IsEmpty())
     {
@@ -118,28 +148,61 @@ void UCombatSubsystem::ProcessTriggerQueue()
         IActionSourceInterface* ActionSourceInterface = Cast<IActionSourceInterface>(Trigger.SpellContext.DamageCauser);
         if (!ActionSourceInterface) continue;
 
+        // 실제로 실행되는 트리거 1건 = 타임라인에 개별 이벤트로 보이도록 스코프를 건다.
+        // 아래 하위 스코프들이 이 블록 내부를 빈틈없이 채운다.
+        TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ProcessTrigger);
+        ++ProcessedThisFrame;
+        MaxDepthThisFrame = FMath::Max(MaxDepthThisFrame, Trigger.ChainDepth);
+
         TArray<FSpellActionSpec> Actions;
-        FSpellTriggerMatcher::CollectActions(ActionSourceInterface->GetTriggerActionBindings(), Trigger, Actions);
+        {
+            SCOPE_CYCLE_COUNTER(STAT_Magicult_CollectActions);
+            TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_CollectActions);
+            FSpellTriggerMatcher::CollectActions(ActionSourceInterface->GetTriggerActionBindings(), Trigger, Actions);
+        }
 
         UActionExecutorSubsystem* Executor = GetWorld()->GetSubsystem<UActionExecutorSubsystem>();
         TArray<FSpellActionExecutionRequest> ExecutionRequests;
-        for (const FSpellActionSpec& Action : Actions)
         {
-            FSpellActionExecutionRequest ExecutionRequest;
-            ExecutionRequest.Context = Trigger.SpellContext;
-            ExecutionRequest.Action = Action;
-            ExecutionRequests.Add(ExecutionRequest);
+            TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_BuildRequests);
+            ExecutionRequests.Reserve(Actions.Num());
+            for (const FSpellActionSpec& Action : Actions)
+            {
+                FSpellActionExecutionRequest ExecutionRequest;
+                ExecutionRequest.Context = Trigger.SpellContext;
+                ExecutionRequest.Action = Action;
+                ExecutionRequests.Add(ExecutionRequest);
+            }
         }
 
-        TArray<FSpellTriggerEventData> GeneratedTriggers = Executor->ExecuteRequest(ExecutionRequests);
+        TArray<FSpellTriggerEventData> GeneratedTriggers;
+        {
+            SCOPE_CYCLE_COUNTER(STAT_Magicult_ExecuteRequest);
+            TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteRequest);
+            GeneratedTriggers = Executor->ExecuteRequest(ExecutionRequests);
+        }
+        GeneratedThisFrame += GeneratedTriggers.Num();
 
         // 파생 트리거에 부모 깊이 +1을 실어 전파
-        for (FSpellTriggerEventData NewTrigger : GeneratedTriggers)
         {
-            NewTrigger.ChainDepth = Trigger.ChainDepth + 1;
-            TriggerQueue.Enqueue(NewTrigger);
+            TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_EnqueueGenerated);
+            for (FSpellTriggerEventData NewTrigger : GeneratedTriggers)
+            {
+                NewTrigger.ChainDepth = Trigger.ChainDepth + 1;
+                TriggerQueue.Enqueue(NewTrigger);
+            }
         }
     }
+
+    // 프레임당 처리량 지표.
+    // stats 채널 → `stat Magicult` 오버레이 / Insights Timing 하단
+    SET_DWORD_STAT(STAT_Magicult_TriggersProcessed, ProcessedThisFrame);
+    SET_DWORD_STAT(STAT_Magicult_TriggersGenerated, GeneratedThisFrame);
+    SET_DWORD_STAT(STAT_Magicult_MaxChainDepth, MaxDepthThisFrame);
+    // counters 채널 → Insights Counters 트랙 (그래프). 매 프레임 세팅해 연속 그래프가 되게 한다.
+    TRACE_COUNTER_SET(Magicult_TriggersProcessed, ProcessedThisFrame);
+    TRACE_COUNTER_SET(Magicult_TriggersGenerated, GeneratedThisFrame);
+    TRACE_COUNTER_SET(Magicult_MaxChainDepth, MaxDepthThisFrame);
 }
 
 bool UCombatSubsystem::IsServer()
