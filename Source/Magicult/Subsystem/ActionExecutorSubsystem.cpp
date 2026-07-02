@@ -796,7 +796,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 		return FSpellActionExecutionResult(false);
 	}
 
-	// Character면 RootMotionSource 사용
+	// Character(플레이어/몬스터)면 속도 기반 넉백 적용
 	AMagicultCharacterBase* Character = Cast<AMagicultCharacterBase>(TargetActor);
 	UCharacterMovementComponent* MoveComp = Character ? Character->GetCharacterMovement() : nullptr;
 	bool bDead = Character ? ICombatInterface::Execute_IsDead(Character) : false;
@@ -829,23 +829,20 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 			}
 		}
 
-		// 비플레이어(몬스터 등): 오너 클라가 없어 GA 복제 이득이 없다.
-		// 서버 RMS + RepRootMotion(시뮬 프록시 스무딩)으로 충분하므로 기존 ConstantForce 유지.
-		FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
+		// 비플레이어(몬스터 등): 클라에서 SimulatedProxy다. 동적 RMS는 sim proxy로 복제되지 않아
+		// 위치 스냅샷만 보간되고, 급격한 속도 변화(특히 정지)를 지연 수신해 오버슛-스냅백(밴딩)이 났다.
+		// 표준 이동 경로인 LaunchCharacter로 바꾼다: 서버에서 속도를 부여하면 마찰로 자연 감속하고,
+		// 그 이동이 표준 movement replication + NetworkSmoothing으로 클라에 전달돼 밴딩이 최소화된다.
+		// sim proxy는 스스로 예측하지 않으므로 서버에서만 Launch해도 표준 복제가 알아서 따라온다
+		// (플레이어는 autonomous proxy라 클라 예측을 위해 GA로 양쪽 실행이 필요했던 것과 대비).
+		// 넉백 상태 제어용 RMS는 몬스터엔 불필요(어떤 코드도 몬스터 RMS 상태에 의존하지 않음).
+		const FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
 			+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
 
-		TSharedPtr<FRootMotionSource_ConstantForce> RMS = MakeShared<FRootMotionSource_ConstantForce>();
-		RMS->InstanceName = FName(TEXT("SpellKnockback"));
-		RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
-		RMS->Priority = 500;
-		RMS->Force = Force;
-		// LaunchCharacter(플레이어) 임펄스 감속과 비슷하게: 짧게 밀고 관성 유지.
-		RMS->Duration = 0.1f;
-		RMS->StrengthOverTime = nullptr;
-		// 넉백이 끝나고 관성 유지
-		RMS->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::MaintainLastRootMotionVelocity;
+		Character->LaunchCharacter(Force, true, true);
 
-		MoveComp->ApplyRootMotionSource(RMS);
+		// 넉백 개시를 다음 정기 net update까지 기다리지 않고 즉시 복제 → 클라 반응 지연 축소.
+		Character->ForceNetUpdate();
 
 		Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
 		return Result;

@@ -19,6 +19,10 @@ AMagicultEnemy::AMagicultEnemy()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
+	// (A) 넉백 등 급격한 이동이 클라 SimulatedProxy에 자주 코렉션되도록 업데이트 빈도 상향.
+	// 플레이어(PlayerState)와 동일하게 100으로 맞춰 스냅샷 간격을 줄인다.
+	NetUpdateFrequency = 100.f;
+
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 	bUseControllerRotationYaw = false;
