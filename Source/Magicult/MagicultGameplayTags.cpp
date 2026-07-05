@@ -639,10 +639,6 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("AttackType.Direct"),
 		TEXT("")
 	);
-	GameplayTags.AttackType_Radial = UGameplayTagsManager::Get().AddNativeGameplayTag(
-		FName("AttackType.Radial"),
-		TEXT("")
-	);
 	GameplayTags.HitType_Environment = UGameplayTagsManager::Get().AddNativeGameplayTag(
 		FName("HitType.Environment"),
 		TEXT("")

@@ -17,7 +17,6 @@ enum class ESpellActionType : uint8
 	None,
 	ConsumePierce,
 	ApplyDamage,
-	ApplyRadialDamage,
 	ApplyElement,
 	ApplyDebuff,
 	SpawnActor,
@@ -203,25 +202,6 @@ struct FSpellKnockbackActionSpec
 };
 
 USTRUCT(BlueprintType)
-struct FSpellRadialDamageActionSpec
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage")
-	float Radius = 0.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage")
-	bool bIgnoreOwner = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage")
-	bool bApplyKnockback = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|RadialDamage",
-		meta = (EditCondition = "bApplyKnockback", EditConditionHides))
-	FSpellKnockbackActionSpec KnockbackSpec;
-};
-
-USTRUCT(BlueprintType)
 struct FSpellActionSpec
 {
 	GENERATED_BODY()
@@ -232,10 +212,6 @@ struct FSpellActionSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::ConsumePierce", EditConditionHides))
 	FSpellConsumePierceActionSpec ConsumePierceSpec;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
-		meta = (EditCondition = "ActionType == ESpellActionType::ApplyRadialDamage", EditConditionHides))
-	FSpellRadialDamageActionSpec RadialDamageSpec;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::ApplyElement", EditConditionHides))

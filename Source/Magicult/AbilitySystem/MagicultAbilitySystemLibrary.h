@@ -65,7 +65,7 @@ public:
 	static FSpellContext MakeSpellContext(UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, AActor* SourceActor, AActor* TargetActor, FHitResult HitResult, bool bHasHitResult = false, UObject* DamageCauser = nullptr);
 
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|DamageEffect")
-	static bool ApplyDefaultDamageGameplayEffect(const FSpellContext& Context, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, bool IsRadialDamage);
+	static bool ApplyDefaultDamageGameplayEffect(const FSpellContext& Context, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC);
 
 	/*
 	* TagToData

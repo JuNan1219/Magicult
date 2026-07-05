@@ -88,7 +88,6 @@ uint8 FSpellTriggerMatcher::GetRequiredFlagsForActionType(ESpellActionType Actio
 	{
 	case ESpellActionType::ConsumePierce:      return HasDamageCauser;
 	case ESpellActionType::ApplyDamage:        return HasTargetASC;
-	case ESpellActionType::ApplyRadialDamage:  return None;
 	case ESpellActionType::ApplyElement:       return HasTargetASC;
 	case ESpellActionType::ApplyDebuff:        return HasTargetASC | HasSourceASC;
 	case ESpellActionType::SpawnActor:         return None;

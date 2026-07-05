@@ -197,7 +197,7 @@ FSpellContext UMagicultAbilitySystemLibrary::MakeSpellContext(UAbilitySystemComp
 
 	return ResultSpellContext;
 }
-static void FillDamageEffectContext(const FSpellContext& Context, FGameplayEffectContextHandle& EffectContext, bool IsRadialDamage)
+static void FillDamageEffectContext(const FSpellContext& Context, FGameplayEffectContextHandle& EffectContext)
 {
 	EffectContext.AddSourceObject(
 		Context.DamageCauser.Get()
@@ -226,13 +226,13 @@ static void FillDamageEffectContext(const FSpellContext& Context, FGameplayEffec
 			MagicultContext->AttackContext.ElementType = AttackSpec.ElementTag;
 			MagicultContext->AttackContext.ElementRatio = AttackSpec.ElementRatio;
 			MagicultContext->AttackContext.BaseDamage = AttackSpec.BaseDamage;
-			MagicultContext->AttackContext.bUseVelocityDamage = !IsRadialDamage && AttackSpec.bUseVelocityDamage;
+			MagicultContext->AttackContext.bUseVelocityDamage = AttackSpec.bUseVelocityDamage;
 			MagicultContext->AttackContext.DamageModifier = AttackSpec.DamageModifier;
 			MagicultContext->AttackContext.DamageCauserVelocity = AttackContextProvider->GetActorVelocity();
 		}
 	}
 }
-bool UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(const FSpellContext& Context, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC, bool IsRadialDamage)
+bool UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(const FSpellContext& Context, UAbilitySystemComponent* SourceASC, UAbilitySystemComponent* TargetASC)
 {
 	if (!TargetASC)
 	{
@@ -297,7 +297,7 @@ bool UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(const FSpel
 	}
 
 	FGameplayEffectContextHandle EffectContext = Spec->GetContext();
-	FillDamageEffectContext(Context, EffectContext, IsRadialDamage);
+	FillDamageEffectContext(Context, EffectContext);
 
 	TargetASC->ApplyGameplayEffectSpecToSelf(*Spec);
 	return true;

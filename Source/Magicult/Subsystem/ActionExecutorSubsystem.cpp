@@ -143,9 +143,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	case ESpellActionType::ConsumePierce:
 		return ExecuteConsumePierce(Action.ConsumePierceSpec, Context);
 	case ESpellActionType::ApplyDamage:
-		return ExecuteApplyDamage(Context, false);
-	case ESpellActionType::ApplyRadialDamage:
-		return ExecuteRadialDamage(Action.RadialDamageSpec, Context);
+		return ExecuteApplyDamage(Context);
 	case ESpellActionType::ApplyElement:
 		return ExecuteResolveElementInteraction(Action.ApplyElementSpec, Context);
 	case ESpellActionType::ApplyDebuff:
@@ -200,7 +198,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteConsumePierce(const
 	return Result;
 }
 
-FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const FSpellContext& Context, bool IsRadialDamage)
+FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const FSpellContext& Context)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteApplyDamage);
 	FSpellActionExecutionResult Result;
@@ -226,7 +224,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 		}
 	}
 
-	const bool bAppliedDamage = UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(Context, SourceASC, TargetASC, IsRadialDamage);
+	const bool bAppliedDamage = UMagicultAbilitySystemLibrary::ApplyDefaultDamageGameplayEffect(Context, SourceASC, TargetASC);
 
 	if (!bAppliedDamage)
 	{
@@ -237,10 +235,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 	TriggerData.TriggerTag = FMagicultGameplayTags::Get().Trigger_OnAttack;
 	TriggerData.SpellContext = Context;
 
-	if (IsRadialDamage)
-		TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Radial);
-	else
-		TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Direct);
+	TriggerData.TriggerContextTags.AddTag(FMagicultGameplayTags::Get().AttackType_Direct);
 
 	// 필요하면 후속 TriggerTags 설계 가능
 	Result.GeneratedTriggerEvents.Add(TriggerData);
@@ -261,113 +256,6 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDamage(const F
 	}
 
 	Result.ResultTag = FMagicultGameplayTags::Get().Action_Damage;
-	return Result;
-}
-
-FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteRadialDamage(const FSpellRadialDamageActionSpec& RadialDamageSpec, const FSpellContext& Context)
-{
-	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteRadialDamage);
-	FSpellActionExecutionResult Result;
-
-	UWorld* World = GetWorld();
-	if (!World || RadialDamageSpec.Radius <= 0.f)
-	{
-		return Result;
-	}
-
-	FVector Origin = FVector::ZeroVector;
-	if (Context.bHasHitResult)
-	{
-		Origin = Context.HitResult.ImpactPoint;
-	}
-	else if (const AActor* DamageCauser = Cast<AActor>(Context.DamageCauser.Get()))
-	{
-		Origin = DamageCauser->GetActorLocation();
-	}
-	else if (const AActor* SourceActor = Context.SourceActor.Get())
-	{
-		Origin = SourceActor->GetActorLocation();
-	}
-
-	TArray<FOverlapResult> OverlapResults;
-
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SpellRadialDamage), false);
-	if (Context.SourceActor.IsValid() && RadialDamageSpec.bIgnoreOwner)
-	{
-		QueryParams.AddIgnoredActor(Context.SourceActor.Get());
-	}
-	if (AActor* DamageCauserActor = Cast<AActor>(Context.DamageCauser.Get()))
-	{
-		QueryParams.AddIgnoredActor(DamageCauserActor);
-	}
-
-	bool bHasOverlap;
-	{
-		// 물리 스피어 오버랩(AllDynamicObjects). 폭발마다 1회 → 연쇄 시 비용 누적 의심 지점.
-		TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_RadialOverlapQuery);
-		bHasOverlap = World->OverlapMultiByObjectType(
-			OverlapResults,
-			Origin,
-			FQuat::Identity,
-			FCollisionObjectQueryParams::AllDynamicObjects,
-			FCollisionShape::MakeSphere(RadialDamageSpec.Radius),
-			QueryParams);
-	}
-
-	bool bTargetEnemiesOnly = false;
-	if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
-	{
-		bTargetEnemiesOnly = Provider->GetAttackSpec().bTargetEnemiesOnly;
-	}
-
-	if (bHasOverlap)
-	{
-		TSet<TWeakObjectPtr<AActor>> ProcessedActors;
-
-		for (const FOverlapResult& OverlapResult : OverlapResults)
-		{
-			AActor* TargetActor = OverlapResult.GetActor();
-			if (!TargetActor || ProcessedActors.Contains(TargetActor))
-			{
-				continue;
-			}
-
-			ProcessedActors.Add(TargetActor);
-
-			if (bTargetEnemiesOnly)
-			{
-				AActor* SourceActor = Context.SourceActor.Get();
-				if (SourceActor && !UMagicultAbilitySystemLibrary::IsNotFriend(SourceActor, TargetActor))
-					continue;
-			}
-
-			UAbilitySystemComponent* TargetASC =
-				UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
-			if (!TargetASC)
-			{
-				continue;
-			}
-
-			FSpellContext RadialContext = Context;
-			RadialContext.TargetActor = TargetActor;
-			RadialContext.TargetAbilitySystemComponent = TargetASC;
-			RadialContext.bHasHitResult = false;
-
-			FSpellActionExecutionResult DamageResult = ExecuteApplyDamage(RadialContext, true);
-			Result.GeneratedTriggerEvents.Append(DamageResult.GeneratedTriggerEvents);
-			Result.GeneratedActionRequests.Append(DamageResult.GeneratedActionRequests);
-
-			if (RadialDamageSpec.bApplyKnockback)
-			{
-				FSpellActionSpec KnockbackAction;
-				KnockbackAction.ActionType = ESpellActionType::Knockback;
-				KnockbackAction.KnockbackSpec = RadialDamageSpec.KnockbackSpec;
-
-				Result.GeneratedActionRequests.Emplace(KnockbackAction, RadialContext);
-			}
-		}
-	}
-
 	return Result;
 }
 

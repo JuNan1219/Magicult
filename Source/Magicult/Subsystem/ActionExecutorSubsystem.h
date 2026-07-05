@@ -34,11 +34,6 @@ private:
 		const FSpellContext& Context);
 
 	FSpellActionExecutionResult ExecuteApplyDamage(
-		const FSpellContext& Context,
-		bool IsRadialDamage = false);
-
-	FSpellActionExecutionResult ExecuteRadialDamage(
-		const FSpellRadialDamageActionSpec& RadialDamageSpec,
 		const FSpellContext& Context);
 
 	FSpellActionExecutionResult ExecuteResolveElementInteraction(
