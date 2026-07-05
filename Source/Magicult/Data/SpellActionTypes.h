@@ -324,6 +324,11 @@ struct FSpellActionExecutionResult
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTag ResultTag;
 
+	// 이 액션이 실제로 실행됐는지(bApplied와 별개). false = 이 머신에 실행 권한이 없어
+	// 조기 스킵됨(예: 클라이언트가 권위 액션을 건너뜀). 프레임 액션 예산 집계에서 제외 대상.
+	UPROPERTY(BlueprintReadOnly)
+	bool bDidWork = true;
+
 	FSpellActionExecutionResult() = default;
 
 	// 성공 여부를 직접 지정하는 생성자. 면역·조기 종료 시 false를 전달한다.

@@ -9,7 +9,6 @@
 #include "NiagaraComponent.h"
 #include "Magicult/Data/SpellTypes.h"
 #include "Magicult/Data/ProjectileTypes.h"
-#include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -235,12 +234,10 @@ void AMagicultProjectile::Expire()
 
 void AMagicultProjectile::OnExpired()
 {
+	// 파괴는 여기서 직접 실행하지 않는다. Trigger_Projectile_Expire에 바인딩된
+	// DestroyActor 액션이 RegisterPendingCleanupObject를 호출해 처리한다 —
+	// 그래야 파괴가 이 트리거의 액션 배치 안에서 이뤄져 원자성이 깨지지 않는다.
 	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_Projectile_Expire, FGameplayTagContainer(), SpellContext);
-
-	if (UCombatSubsystem* CombatSubsystem = GetWorld()->GetSubsystem<UCombatSubsystem>())
-	{
-		CombatSubsystem->RegisterPendingCleanupObject(this);
-	}
 }
 
 void AMagicultProjectile::UnbindCollisionEvents()

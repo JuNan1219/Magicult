@@ -19,7 +19,7 @@ class MAGICULT_API UActionExecutorSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
-	TArray<FSpellTriggerEventData> ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request);
+	TArray<FSpellTriggerEventData> ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request, int32& OutActionsExecuted);
 
 	// Tag를 ImmunityPolicy에서 조회하여 대상 ASC가 면역 태그를 보유 중이면 true 반환
 	bool CheckImmunity(const FGameplayTag& Tag, const FSpellContext& Context) const;

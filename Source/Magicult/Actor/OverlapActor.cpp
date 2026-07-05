@@ -10,7 +10,6 @@
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/Attack/OverlapDamageConfig.h"
 #include "Magicult/Data/SpellTypes.h"
-#include "Magicult/Subsystem/CombatSubsystem.h"
 
 AOverlapActor::AOverlapActor()
 {
@@ -66,15 +65,10 @@ void AOverlapActor::Expire()
 }
 void AOverlapActor::OnExpired()
 {
+	// 파괴는 여기서 직접 실행하지 않는다. Trigger_Projectile_Expire에 바인딩된
+	// DestroyActor 액션이 RegisterPendingCleanupObject를 호출해 처리한다 —
+	// 그래야 파괴가 이 트리거의 액션 배치 안에서 이뤄져 원자성이 깨지지 않는다.
 	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_Projectile_Expire, FGameplayTagContainer(), SpellContext);
-
-	if (UWorld* World = GetWorld())
-	{
-		if (UCombatSubsystem* CombatSubsystem = World->GetSubsystem<UCombatSubsystem>())
-		{
-			CombatSubsystem->RegisterPendingCleanupObject(this);
-		}
-	}
 }
 
 void AOverlapActor::LifeSpanExpired()

@@ -25,8 +25,10 @@
 #include "Magicult/Data/ImmunityPolicy.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 
-TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request)
+TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request, int32& OutActionsExecuted)
 {
+	OutActionsExecuted = 0;
+
 	TArray<FSpellTriggerEventData> ResultTriggerEventData;
 
 	TQueue<FSpellActionExecutionRequest> PendingExecutionQueue;
@@ -55,7 +57,18 @@ TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TA
 		const FSpellActionSpec& CurrentAction = CurrentExecutionRequest.Action;
 		const FSpellContext& CurrentContext = CurrentExecutionRequest.Context;
 
-		FSpellActionExecutionResult Result = ExecuteSingleAction(CurrentAction, CurrentContext);
+		FSpellActionExecutionResult Result;
+		{
+			// 액션 1건 = Insights 타임라인의 개별 이벤트. Timers 패널에서 이 스코프 이름으로
+			// 발생 횟수(Count)·총시간(Total)·평균시간(Avg)이 자동 집계된다.
+			TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteSingleAction);
+			Result = ExecuteSingleAction(CurrentAction, CurrentContext);
+		}
+
+		if (Result.bDidWork)
+		{
+			++OutActionsExecuted;
+		}
 
 		// 파생 요청에 부모 깊이 +1 전파
 		for (FSpellActionExecutionRequest GeneratedRequest : Result.GeneratedActionRequests)
@@ -116,8 +129,14 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
 	                      || Action.ActionType == ESpellActionType::PlayCue;
 
-	if (bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) return {};
-	if (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client))         return {};
+	if ((bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) ||
+	    (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client)))
+	{
+		// 이 머신에 실행 권한이 없는 액션 - 아무 일도 안 했으므로 프레임 예산 집계에서 제외.
+		FSpellActionExecutionResult SkippedResult;
+		SkippedResult.bDidWork = false;
+		return SkippedResult;
+	}
 
 	switch (Action.ActionType)
 	{
