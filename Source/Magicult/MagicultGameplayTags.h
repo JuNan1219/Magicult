@@ -223,7 +223,6 @@ public:
 	FGameplayTag Trigger_Projectile_Depleted;
 
 	FGameplayTag AttackType_Direct;
-	FGameplayTag AttackType_Radial;
 	FGameplayTag HitType_Environment;
 
 	// 소켓
