@@ -9,6 +9,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/Character/MagicultCharacterBase.h"
+#include "Magicult/MagicultGameplayTags.h"
 
 UMagicultAttributeSet::UMagicultAttributeSet()
 {

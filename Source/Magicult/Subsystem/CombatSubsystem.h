@@ -34,6 +34,9 @@ public:
 private:
 	TQueue<FSpellTriggerEventData> TriggerQueue;
 
+	// 모든 enqueue의 단일 관문. DamageCauserPin이 비어있으면 SpellContext.DamageCauser로 채운다.
+	void EnqueueInternal(FSpellTriggerEventData& TriggerEventData);
+
 	void ProcessTriggerQueue();
 
 	bool IsServer();

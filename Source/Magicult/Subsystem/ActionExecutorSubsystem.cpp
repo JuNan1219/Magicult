@@ -14,6 +14,7 @@
 #include "Magicult/AbilitySystem/Abilities/KnockbackGameplayAbility.h"
 #include "Components/PrimitiveComponent.h"
 #include "Magicult/Actor/MagicultProjectile.h"
+#include "Magicult/Attack/AttackInstance.h"
 #include "Magicult/Subsystem/CombatResolveSubsystem.h"
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
@@ -145,6 +146,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 		return ExecuteDestroyActor(Context);
 	case ESpellActionType::Interrupt:
 		return ExecuteInterrupt(Action.InterruptSpec, Context);
+	case ESpellActionType::SpawnAttackInstance:
+		return ExecuteSpawnAttackInstance(Action.SpawnAttackInstanceSpec, Context);
 	default:
 		break;
 	}
@@ -539,6 +542,63 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSpawnActor(const FS
 	return Result;
 }
 
+FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSpawnAttackInstance(const FSpellSpawnAttackInstanceActionSpec& Spec, const FSpellContext& Context)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteSpawnAttackInstance);
+	FSpellActionExecutionResult Result;
+
+	if (!Spec.AttackInstanceClass)
+	{
+		return Result;
+	}
+
+	UAttackInstance* NewCauser = NewObject<UAttackInstance>(this, Spec.AttackInstanceClass);
+	if (!NewCauser)
+	{
+		return Result;
+	}
+
+	// origin·부모 스펙은 DamageCauser 교체 *전*의 원본 Context로 해석한다.
+	// (DamageCauser 정책이면 부모 causer(예: 발사체)의 위치를 가져와야 하고,
+	//  스펙도 부모 causer의 것을 물려받아야 하므로.)
+	const FVector Origin = ResolveOriginByPolicy(Spec.OriginPolicy, Context, Spec.SocketTag);
+
+	// 데미지 필드(BaseDamage/Element/Modifier/velocity)는 전부 DamageCauser.GetAttackSpec()에서
+	// 나오므로(FillDamageEffectContext), 발사체 폭발이 발사체 데미지를 쓰려면 부모 스펙을 물려줘야 한다.
+	FAttackSpec InheritedSpec;
+	bool bOverrideSpec = false;
+	if (Spec.bInheritSpecFromCauser)
+	{
+		if (const IAttackContextProvider* ParentProvider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
+		{
+			InheritedSpec = ParentProvider->GetAttackSpec();
+			bOverrideSpec = true;
+		}
+	}
+
+	// 이 causer가 발행할 트리거의 DamageCauser는 "자기 자신"이어야 한다.
+	// (ProcessTriggerQueue가 DamageCauser로 TriggerActionBindings를 조회하므로.)
+	// GA가 MakeSpellContext(..., CurrentAttackInstance)로 하는 것과 동일 패턴.
+	FSpellContext CauserContext = Context;                       // TriggerChainDepth 등 상속
+	CauserContext.DamageCauser = NewCauser;                      // weak — 정체성 교체
+	CauserContext.TargetActor = nullptr;                         // 대상은 수집 전이므로 미정
+	CauserContext.TargetAbilitySystemComponent = nullptr;
+
+	// bInheritSpecFromCauser=false면 bOverrideSpec=false → AttackInstance 자신의 기본 Spec 유지.
+	NewCauser->Initialize(CauserContext, InheritedSpec, bOverrideSpec);
+	NewCauser->SetAttackOrigin(Origin);                          // policy로 해석한 수집 중심 주입
+	NewCauser->SetInstanceConfig(Spec.InstanceConfig);           // InitializeWithConfig()로 반경 등 세팅
+	NewCauser->SetOwnerActor(Context.SourceActor.Get());
+	NewCauser->Execute();
+
+	// 즉시 실행: 생성 직후 활성화 태그를 스스로에게 전달해 동기적으로 수집·발행하게 한다.
+	// NewCauser는 이 함수 리턴 후 아무도 강참조하지 않으므로, 여기서 발행한 트리거가
+	// EnqueueInternal의 pin을 걸어야만(§Pin) 리턴 이후에도 살아남아 처리된다.
+	NewCauser->HandleEventTag(FMagicultGameplayTags::Get().Notify_Attack_Commit);
+
+	return Result;
+}
+
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteGameplayEffect(const FSpellApplyGEActionSpec& ApplyGESpec, const FSpellContext& Context)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteGameplayEffect);
@@ -583,6 +643,102 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteGameplayEffect(cons
 	return Result;
 }
 
+AActor* UActionExecutorSubsystem::ResolveActorByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context) const
+{
+	switch (Policy)
+	{
+	case ESpellActionTargetPolicy::Source:
+	case ESpellActionTargetPolicy::SocketTransform:
+		return Context.SourceActor.Get();
+
+	case ESpellActionTargetPolicy::Target:
+	case ESpellActionTargetPolicy::HitActor:
+		return Context.TargetActor.Get();
+
+	case ESpellActionTargetPolicy::DamageCauser:
+		if (AActor* DamageCauserActor = Cast<AActor>(Context.DamageCauser.Get()))
+		{
+			return DamageCauserActor;
+		}
+		return Context.TargetActor.Get();
+
+	default:
+		return nullptr;
+	}
+}
+
+FTransform UActionExecutorSubsystem::ResolveTransformByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context, FGameplayTag SocketTag, bool* bOutResolved) const
+{
+	if (bOutResolved) *bOutResolved = true;
+
+	switch (Policy)
+	{
+	case ESpellActionTargetPolicy::HitLocation:
+		if (Context.bHasHitResult)
+		{
+			return FTransform(Context.HitResult.ImpactPoint);
+		}
+		break;
+
+	case ESpellActionTargetPolicy::SocketTransform:
+		if (AActor* Actor = ResolveActorByPolicy(Policy, Context))
+		{
+			if (Actor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()) && SocketTag.IsValid())
+				return ICombatInterface::Execute_GetCombatSocketLocation(Actor, SocketTag);
+			return Actor->GetActorTransform();
+		}
+		break;
+
+	case ESpellActionTargetPolicy::DamageCauser:
+		// Actor causer는 자기 트랜스폼, UObject causer(AttackInstance 등)는 주입된 origin.
+		if (AActor* CauserActor = Cast<AActor>(Context.DamageCauser.Get()))
+		{
+			return CauserActor->GetActorTransform();
+		}
+		if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
+		{
+			return FTransform(Provider->GetAttackOrigin());
+		}
+		break;
+
+	case ESpellActionTargetPolicy::Source:
+	case ESpellActionTargetPolicy::Target:
+	case ESpellActionTargetPolicy::HitActor:
+		if (AActor* Actor = ResolveActorByPolicy(Policy, Context))
+		{
+			return Actor->GetActorTransform();
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	if (bOutResolved) *bOutResolved = false;
+	return FTransform::Identity;
+}
+
+FVector UActionExecutorSubsystem::ResolveOriginByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context, FGameplayTag SocketTag) const
+{
+	bool bResolved = false;
+	const FTransform Resolved = ResolveTransformByPolicy(Policy, Context, SocketTag, &bResolved);
+	if (bResolved)
+	{
+		return Resolved.GetLocation();
+	}
+
+	// fallback: origin이 조용히 (0,0,0)이 되어 월드 원점에서 터지는 사고를 막는다.
+	if (const AActor* CauserActor = Cast<AActor>(Context.DamageCauser.Get()))
+	{
+		return CauserActor->GetActorLocation();
+	}
+	if (const AActor* SourceActor = Context.SourceActor.Get())
+	{
+		return SourceActor->GetActorLocation();
+	}
+	return FVector::ZeroVector;
+}
+
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteEmitNiagara(const FSpellEmitNiagaraActionSpec& EmitNiagaraSpec, const FSpellContext& Context)
 {
 	FSpellActionExecutionResult Result;
@@ -598,69 +754,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteEmitNiagara(const F
 		return Result;
 	}
 
-	auto ResolveActorByPolicy = [&Context](ESpellActionTargetPolicy Policy) -> AActor*
-		{
-			switch (Policy)
-			{
-			case ESpellActionTargetPolicy::Source:
-			case ESpellActionTargetPolicy::SocketTransform:
-				return Context.SourceActor.Get();
-
-			case ESpellActionTargetPolicy::Target:
-			case ESpellActionTargetPolicy::HitActor:
-				return Context.TargetActor.Get();
-
-			case ESpellActionTargetPolicy::DamageCauser:
-			{
-				if (AActor* DamageCauserActor = Cast<AActor>(Context.DamageCauser.Get()))
-				{
-					return DamageCauserActor;
-				}
-				return Context.TargetActor.Get();
-			}
-
-			default:
-				return nullptr;
-			}
-		};
-
-	auto ResolveTransformByPolicy = [&Context, &ResolveActorByPolicy, &EmitNiagaraSpec](ESpellActionTargetPolicy Policy) -> FTransform
-		{
-			switch (Policy)
-			{
-			case ESpellActionTargetPolicy::HitLocation:
-				if (Context.bHasHitResult)
-				{
-					return FTransform(Context.HitResult.ImpactPoint);
-				}
-				break;
-			case ESpellActionTargetPolicy::SocketTransform:
-				if (AActor* Actor = ResolveActorByPolicy(Policy))
-				{
-					if (Actor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()) && EmitNiagaraSpec.SocketTag.IsValid())
-						return ICombatInterface::Execute_GetCombatSocketLocation(Actor, EmitNiagaraSpec.SocketTag);
-					return Actor->GetActorTransform();
-				}
-				break;
-
-			case ESpellActionTargetPolicy::Source:
-			case ESpellActionTargetPolicy::Target:
-			case ESpellActionTargetPolicy::HitActor:
-			case ESpellActionTargetPolicy::DamageCauser:
-				if (AActor* Actor = ResolveActorByPolicy(Policy))
-				{
-					return Actor->GetActorTransform();
-				}
-				break;
-
-			default:
-				break;
-			}
-
-			return FTransform::Identity;
-		};
-
-	const FTransform BaseTransform = ResolveTransformByPolicy(EmitNiagaraSpec.TargetPolicy);
+	const FTransform BaseTransform = ResolveTransformByPolicy(EmitNiagaraSpec.TargetPolicy, Context, EmitNiagaraSpec.SocketTag);
 	const FTransform SpawnTransform = BaseTransform * EmitNiagaraSpec.RelativeTransform;
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -717,67 +811,18 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 {
 	FSpellActionExecutionResult Result;
 
-	auto ResolveActorByPolicy = [&Context](ESpellActionTargetPolicy Policy) -> AActor*
-		{
-			switch (Policy)
-			{
-			case ESpellActionTargetPolicy::Source:
-				return Context.SourceActor.Get();
-
-			case ESpellActionTargetPolicy::Target:
-			case ESpellActionTargetPolicy::HitActor:
-				return Context.TargetActor.Get();
-
-			case ESpellActionTargetPolicy::DamageCauser:
-			{
-				AActor* DamageCauserActor = Cast<AActor>(Context.DamageCauser.Get());
-				return DamageCauserActor ? DamageCauserActor : Context.TargetActor.Get();
-			}
-			default:
-				return nullptr;
-			}
-		};
-
-	auto ResolveLocationByPolicy = [&Context, &ResolveActorByPolicy](ESpellActionTargetPolicy Policy) -> FVector
-		{
-			switch (Policy)
-			{
-			case ESpellActionTargetPolicy::HitLocation:
-				if (Context.bHasHitResult)
-				{
-					return Context.HitResult.ImpactPoint;
-				}
-
-				break;
-
-			case ESpellActionTargetPolicy::Source:
-			case ESpellActionTargetPolicy::Target:
-			case ESpellActionTargetPolicy::HitActor:
-			case ESpellActionTargetPolicy::DamageCauser:
-				if (AActor* Actor = ResolveActorByPolicy(Policy))
-				{
-					return Actor->GetActorLocation();
-				}
-				break;
-
-			default:
-				break;
-			}
-
-			return FVector::ZeroVector;
-		};
-
 	if (CheckImmunity(FMagicultGameplayTags::Get().Action_Knockback, Context))
 		return FSpellActionExecutionResult(false);
 
-	AActor* TargetActor = ResolveActorByPolicy(KnockbackSpec.TargetPolicy);
+	AActor* TargetActor = ResolveActorByPolicy(KnockbackSpec.TargetPolicy, Context);
 	if (!TargetActor)
 	{
 		return FSpellActionExecutionResult(false);
 	}
 
 	const FVector TargetLocation = TargetActor->GetActorLocation();
-	const FVector OriginLocation = ResolveLocationByPolicy(KnockbackSpec.OriginPolicy);
+	// DamageCauser 정책이면 UObject causer(폭발)의 GetAttackOrigin으로 중심을 얻는다(공용 헬퍼).
+	const FVector OriginLocation = ResolveOriginByPolicy(KnockbackSpec.OriginPolicy, Context, FGameplayTag());
 
 	FVector KnockbackDirection = FVector::ZeroVector;
 
@@ -814,48 +859,28 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 	if (Character && MoveComp && !bDead)
 	{
-		// [테스트] 플레이어: GA(LaunchCharacter 버전)로 보낸다.
+		// GA로 보낸다.
 		// ServerInitiated → 서버·클라 양쪽이 LaunchCharacter(Force) → 표준 이동 예측 경로로 감속.
-		if (Character->IsPlayerControlled())
+		if (UAbilitySystemComponent* TargetASC =
+			UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
 		{
-			if (UAbilitySystemComponent* TargetASC =
-				UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
-			{
-				const FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
-					+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
+			const FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
+				+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
 
-				FGameplayAbilityTargetData_Knockback* Data = new FGameplayAbilityTargetData_Knockback();
-				Data->Force = Force;
+			FGameplayAbilityTargetData_Knockback* Data = new FGameplayAbilityTargetData_Knockback();
+			Data->Force = Force;
 
-				FGameplayEventData Payload;
-				Payload.EventTag = FMagicultGameplayTags::Get().Action_Knockback;
-				Payload.Instigator = Context.SourceActor.Get();
-				Payload.Target = TargetActor;
-				Payload.TargetData.Add(Data);
+			FGameplayEventData Payload;
+			Payload.EventTag = FMagicultGameplayTags::Get().Action_Knockback;
+			Payload.Instigator = Context.SourceActor.Get();
+			Payload.Target = TargetActor;
+			Payload.TargetData.Add(Data);
 
-				TargetASC->HandleGameplayEvent(Payload.EventTag, &Payload);
+			TargetASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 
-				Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
-				return Result;
-			}
+			Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
+			return Result;
 		}
-
-		// 비플레이어(몬스터 등): 클라에서 SimulatedProxy다. 동적 RMS는 sim proxy로 복제되지 않아
-		// 위치 스냅샷만 보간되고, 급격한 속도 변화(특히 정지)를 지연 수신해 오버슛-스냅백(밴딩)이 났다.
-		// 표준 이동 경로인 LaunchCharacter로 바꾼다: 서버에서 속도를 부여하면 마찰로 자연 감속하고,
-		// 그 이동이 표준 movement replication + NetworkSmoothing으로 클라에 전달돼 밴딩이 최소화된다.
-		// sim proxy는 스스로 예측하지 않으므로 서버에서만 Launch해도 표준 복제가 알아서 따라온다
-		// (플레이어는 autonomous proxy라 클라 예측을 위해 GA로 양쪽 실행이 필요했던 것과 대비).
-		// 넉백 상태 제어용 RMS는 몬스터엔 불필요(어떤 코드도 몬스터 RMS 상태에 의존하지 않음).
-		const FVector Force = (KnockbackDirection * KnockbackSpec.Strength)
-			+ (FVector::UpVector * KnockbackSpec.UpwardStrength);
-
-		Character->LaunchCharacter(Force, true, true);
-
-		// 넉백 개시를 다음 정기 net update까지 기다리지 않고 즉시 복제 → 클라 반응 지연 축소.
-		Character->ForceNetUpdate();
-
-		Result.ResultTag = FMagicultGameplayTags::Get().Action_Knockback;
 		return Result;
 	}
 

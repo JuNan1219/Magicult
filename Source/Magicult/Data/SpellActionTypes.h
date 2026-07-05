@@ -7,6 +7,8 @@
 class UGameplayEffect;
 class UGameplayAbility;
 class UNiagaraSystem;
+class UAttackInstance;
+class UAttackInstanceConfig;
 
 // 우선순위 별
 UENUM(BlueprintType)
@@ -24,7 +26,8 @@ enum class ESpellActionType : uint8
 	PlayCue,
 	Knockback,
 	DestroyActor,
-	Interrupt
+	Interrupt,
+	SpawnAttackInstance
 };
 
 // 필요한 ActionSpec에 변수로 사용
@@ -87,6 +90,34 @@ struct FSpellSpawnActorActionSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Spawn")
 	bool bAttachToHitTarget = false;
+};
+
+USTRUCT(BlueprintType)
+struct FSpellSpawnAttackInstanceActionSpec
+{
+	GENERATED_BODY()
+
+	// 생성할 논리 공격(AttackInstance) 클래스. 수집·발행 전략은 이 클래스가 정한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance")
+	TSubclassOf<UAttackInstance> AttackInstanceClass;
+
+	// AttackInstance 초기화용 추상 Config(예: URadialDamageConfig).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance")
+	TObjectPtr<UAttackInstanceConfig> InstanceConfig = nullptr;
+
+	// 생성될 AttackInstance의 origin(수집 중심)을 어디서 뽑을지. 발사체 폭발=HitLocation, 자기중심=Source 등.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance")
+	ESpellActionTargetPolicy OriginPolicy = ESpellActionTargetPolicy::HitLocation;
+
+	// SocketTransform 정책일 때만 사용.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance",
+		meta = (EditCondition = "OriginPolicy == ESpellActionTargetPolicy::SocketTransform", EditConditionHides))
+	FGameplayTag SocketTag;
+
+	// true면 스폰을 유발한 부모 DamageCauser의 AttackSpec을 물려받는다(발사체 폭발이 발사체 데미지를 쓰도록).
+	// false면 생성된 AttackInstance 자신의 기본 Spec을 쓴다(고정 데미지 노바 등).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance")
+	bool bInheritSpecFromCauser = true;
 };
 
 USTRUCT(BlueprintType)
@@ -237,6 +268,10 @@ struct FSpellActionSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::Interrupt", EditConditionHides))
 	FSpellInterruptActionSpec InterruptSpec;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
+		meta = (EditCondition = "ActionType == ESpellActionType::SpawnAttackInstance", EditConditionHides))
+	FSpellSpawnAttackInstanceActionSpec SpawnAttackInstanceSpec;
 };
 
 USTRUCT(BlueprintType)

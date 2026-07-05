@@ -8,6 +8,7 @@
 #include "ActionExecutorSubsystem.generated.h"
 
 struct FSpellContext;
+class AActor;
 
 /**
  *
@@ -52,6 +53,10 @@ private:
 		const FSpellSpawnActorActionSpec& SpawnActorSpec,
 		const FSpellContext& Context);
 
+	FSpellActionExecutionResult ExecuteSpawnAttackInstance(
+		const FSpellSpawnAttackInstanceActionSpec& Spec,
+		const FSpellContext& Context);
+
 	FSpellActionExecutionResult ExecuteGameplayEffect(
 		const FSpellApplyGEActionSpec& ApplyGESpec,
 		const FSpellContext& Context);
@@ -74,4 +79,13 @@ private:
 	FSpellActionExecutionResult ExecuteInterrupt(
 		const FSpellInterruptActionSpec& InterruptSpec,
 		const FSpellContext& Context);
+
+	// --- Policy 기반 위치 해석 (EmitNiagara / SpawnAttackInstance 공용) ---
+	AActor* ResolveActorByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context) const;
+
+	// Policy를 Transform으로 해석. 해석 실패 시 Identity 반환하고 bOutResolved=false.
+	FTransform ResolveTransformByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context, FGameplayTag SocketTag, bool* bOutResolved = nullptr) const;
+
+	// Policy를 위치로 해석. 해석 실패 시 fallback(DamageCauser→Source)으로 원점 사고 방지.
+	FVector ResolveOriginByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context, FGameplayTag SocketTag) const;
 };

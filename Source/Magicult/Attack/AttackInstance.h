@@ -33,7 +33,7 @@ class MAGICULT_API UAttackInstance : public UObject, public IActionSourceInterfa
 public:
 	void Initialize(const FSpellContext& InSpellContext, const FAttackSpec& InAttackSpec, bool bOverrideAttackSpec = false);
 
-	void SetAttackSpec(const FAttackSpec& InAttackSpec);
+	virtual void SetAttackSpec(const FAttackSpec& InAttackSpec);
 
 	void SetSocketTag(FGameplayTag InSocketTag);
 
@@ -70,6 +70,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "AttackInstance")
 	AActor* GetOwnerActor() const;
+
+	// 외부에서 주입하는 수집 중심 위치. Actor가 아닌 논리 공격이 소켓 대신 사용한다.
+	UFUNCTION(BlueprintCallable, Category = "AttackInstance")
+	void SetAttackOrigin(const FVector& InOrigin);
+
+	// IAttackContextProvider::GetAttackOrigin — 주입된 origin 반환.
+	virtual FVector GetAttackOrigin() const override;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite ,Category = "AttackInstance")
 	FGameplayTag SocketTag;
@@ -108,4 +115,7 @@ protected:
 
 	UPROPERTY()
 	TWeakObjectPtr<AActor> OwnerActor;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector AttackOrigin = FVector::ZeroVector;
 };

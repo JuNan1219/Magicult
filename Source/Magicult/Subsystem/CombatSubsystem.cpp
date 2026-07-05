@@ -75,7 +75,19 @@ bool UCombatSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 
 void UCombatSubsystem::Enqueue(FSpellTriggerEventData NewTriggerEventData)
 {
-    TriggerQueue.Enqueue(NewTriggerEventData);
+    EnqueueInternal(NewTriggerEventData);
+}
+
+void UCombatSubsystem::EnqueueInternal(FSpellTriggerEventData& TriggerEventData)
+{
+    // causer 수명 pin: 트리거가 큐에 있는 동안 DamageCauser를 GC로부터 붙잡는다.
+    // action-spawned AttackInstance처럼 아무도 강참조하지 않는 causer는 이 pin이 유일한 수명줄.
+    if (!TriggerEventData.DamageCauserPin.IsValid())
+    {
+        TriggerEventData.DamageCauserPin = TStrongObjectPtr<UObject>(TriggerEventData.SpellContext.DamageCauser.Get());
+    }
+
+    TriggerQueue.Enqueue(TriggerEventData);
 }
 
 void UCombatSubsystem::RegisterPendingCleanupObject(UObject* RuntimeObject)
@@ -136,7 +148,7 @@ void UCombatSubsystem::ProcessTriggerQueue()
 
         // 깊이 초과 트리거는 skip - break가 아니라 continue로 큐를 끝까지 소진한다.
         // (독립적인 원본 트리거들이 누락되지 않도록)
-        if (Trigger.ChainDepth > MaxChainDepth)
+        if (Trigger.SpellContext.TriggerChainDepth > MaxChainDepth)
         {
             UE_LOG(LogTemp, Warning, TEXT("SpellTrigger: MaxChainDepth(%d) exceeded. TriggerTag=%s"),
                 MaxChainDepth, *Trigger.TriggerTag.ToString());
@@ -152,7 +164,7 @@ void UCombatSubsystem::ProcessTriggerQueue()
         // 아래 하위 스코프들이 이 블록 내부를 빈틈없이 채운다.
         TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ProcessTrigger);
         ++ProcessedThisFrame;
-        MaxDepthThisFrame = FMath::Max(MaxDepthThisFrame, Trigger.ChainDepth);
+        MaxDepthThisFrame = FMath::Max(MaxDepthThisFrame, Trigger.SpellContext.TriggerChainDepth);
 
         TArray<FSpellActionSpec> Actions;
         {
@@ -188,8 +200,8 @@ void UCombatSubsystem::ProcessTriggerQueue()
             TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_EnqueueGenerated);
             for (FSpellTriggerEventData NewTrigger : GeneratedTriggers)
             {
-                NewTrigger.ChainDepth = Trigger.ChainDepth + 1;
-                TriggerQueue.Enqueue(NewTrigger);
+                NewTrigger.SpellContext.TriggerChainDepth = Trigger.SpellContext.TriggerChainDepth + 1;
+                EnqueueInternal(NewTrigger);
             }
         }
     }

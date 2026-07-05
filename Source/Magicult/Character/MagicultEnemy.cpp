@@ -90,6 +90,10 @@ void AMagicultEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 Ne
 	if (MagicultAIController && MagicultAIController->GetBlackboardComponent())
 	{
 		MagicultAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReacting);
+		if (bHitReacting)
+		{
+			MagicultAIController->StopMovement();
+		}
 	}
 }
 
