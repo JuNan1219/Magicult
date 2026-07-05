@@ -34,6 +34,12 @@ struct FSpellContext
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bHasHitResult = false;
+
+	// 트리거 재귀 깊이. 최초(직접) 트리거=0, causer가 발행하는 파생 트리거=부모+1.
+	// ProcessTriggerQueue가 MaxChainDepth로 무한 트리거 체인을 차단한다.
+	// (FSpellActionExecutionRequest.ChainDepth[액션 팬아웃 재귀]와는 다른 축이다.)
+	UPROPERTY(BlueprintReadWrite)
+	int32 TriggerChainDepth = 0;
 };
 
 USTRUCT(BlueprintType)

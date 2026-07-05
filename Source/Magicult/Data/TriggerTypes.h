@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "SpellTypes.h"
+#include "UObject/StrongObjectPtr.h"
 #include "TriggerTypes.generated.h"
 
 class AMagicultProjectile;
@@ -34,9 +35,11 @@ struct FSpellTriggerEventData
 	UPROPERTY(BlueprintReadWrite)
 	FSpellContext SpellContext;
 
-	// 체인 반응 깊이. 플레이어/AI 직접 발생 이벤트=0, 파생 이벤트=부모+1.
-	// ProcessTriggerQueue가 이 값으로 무한 체인을 차단한다.
-	int32 ChainDepth = 0;
+	// causer 수명 pin. 트리거가 큐에 있는 동안 DamageCauser(UObject)를 GC로부터 붙잡는다.
+	// UPROPERTY 불가(BlueprintType USTRUCT + TStrongObjectPtr). TQueue는 비-UPROPERTY 컨테이너라
+	// TObjectPtr는 GC 추적이 안 되므로 TStrongObjectPtr만 유효하다.
+	// EnqueueInternal이 SpellContext.DamageCauser로부터 자동으로 채운다.
+	TStrongObjectPtr<UObject> DamageCauserPin;
 };
 
 /*

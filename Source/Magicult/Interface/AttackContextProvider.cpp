@@ -14,3 +14,8 @@ FVector IAttackContextProvider::GetActorVelocity() const
 {
 	return FVector::ZeroVector;
 }
+
+FVector IAttackContextProvider::GetAttackOrigin() const
+{
+	return FVector::ZeroVector;
+}

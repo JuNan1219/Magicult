@@ -126,3 +126,13 @@ AActor* UAttackInstance::GetOwnerActor() const
 {
 	return OwnerActor.Get();
 }
+
+void UAttackInstance::SetAttackOrigin(const FVector& InOrigin)
+{
+	AttackOrigin = InOrigin;
+}
+
+FVector UAttackInstance::GetAttackOrigin() const
+{
+	return AttackOrigin;
+}
