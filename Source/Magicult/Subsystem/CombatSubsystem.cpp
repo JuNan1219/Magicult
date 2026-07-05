@@ -14,6 +14,17 @@
 #include "Magicult/Interface/ActionSourceInterface.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "ProfilingDebugging/CountersTrace.h"
+#include "HAL/IConsoleManager.h"
+
+// 프레임당 처리할 Action 개수 상한(트리거 단위로 체크 - ProcessTriggerQueue 참조).
+// 다발 폭발/원소 연쇄로 인한 500+ Action/frame 스파이크를 여러 프레임에 걸쳐 분산시키기 위한 값.
+// 하드 데드라인이 아니라 스파이크 완화용 휴리스틱 — 트리거 하나의 액션 배치는 항상 원자적으로
+// 같은 프레임에서 끝까지 처리되므로(데미지/이펙트 불일치 방지) 예산을 다소 오버슈트할 수 있다.
+static TAutoConsoleVariable<int32> CVarMaxActionsPerFrame(
+    TEXT("Magicult.Combat.MaxActionsPerFrame"),
+    128,
+    TEXT("한 프레임에 처리할 최대 Action 수(트리거 단위 휴리스틱, 오버슈트 가능)"),
+    ECVF_Default);
 
 // TriggerQueue 처리 비용 관측용 계측. Test/Shipping 빌드에서는 엔진이 자동으로 컴파일 아웃한다.
 //
@@ -30,10 +41,12 @@ DECLARE_CYCLE_STAT(TEXT("  ExecuteRequest"), STAT_Magicult_ExecuteRequest, STATG
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers processed / frame"), STAT_Magicult_TriggersProcessed, STATGROUP_Magicult);
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers generated / frame"), STAT_Magicult_TriggersGenerated, STATGROUP_Magicult);
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Max chain depth / frame"), STAT_Magicult_MaxChainDepth, STATGROUP_Magicult);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Actions processed / frame"), STAT_Magicult_ActionsProcessed, STATGROUP_Magicult);
 
 TRACE_DECLARE_INT_COUNTER(Magicult_TriggersProcessed, TEXT("Magicult/Triggers Processed"));
 TRACE_DECLARE_INT_COUNTER(Magicult_TriggersGenerated, TEXT("Magicult/Triggers Generated"));
 TRACE_DECLARE_INT_COUNTER(Magicult_MaxChainDepth, TEXT("Magicult/Max Chain Depth"));
+TRACE_DECLARE_INT_COUNTER(Magicult_ActionsProcessed, TEXT("Magicult/Actions Processed"));
 
 void UCombatSubsystem::Tick(float DeltaTime)
 {
@@ -141,7 +154,15 @@ void UCombatSubsystem::ProcessTriggerQueue()
     int32 GeneratedThisFrame = 0;
     int32 MaxDepthThisFrame = 0;
 
-    while (!TriggerQueue.IsEmpty())
+    // 프레임 예산: 트리거 단위로 체크한다 - 한 트리거에 묶인 Action들은 항상 같은 프레임에서
+    // 통째로 처리되므로(원자성 보장, 폭발 이펙트/데미지 불일치 방지), 트리거 하나의 액션 수만큼
+    // 예산을 넘길 수 있다. 하드 데드라인이 아니라 스파이크 완화용 휴리스틱.
+    // 예산 초과로 못 처리한 트리거는 큐에 남아 다음 Tick의 ProcessTriggerQueue가 이어서 처리한다
+    // (causer는 DamageCauserPin이 프레임을 넘겨서도 살려준다).
+    const int32 ActionBudget = CVarMaxActionsPerFrame.GetValueOnGameThread();
+    int32 ActionsProcessedThisFrame = 0;
+
+    while (ActionsProcessedThisFrame < ActionBudget && !TriggerQueue.IsEmpty())
     {
         FSpellTriggerEventData Trigger;
         TriggerQueue.Dequeue(Trigger);
@@ -188,12 +209,14 @@ void UCombatSubsystem::ProcessTriggerQueue()
         }
 
         TArray<FSpellTriggerEventData> GeneratedTriggers;
+        int32 ActionsExecuted = 0;
         {
             SCOPE_CYCLE_COUNTER(STAT_Magicult_ExecuteRequest);
             TRACE_CPUPROFILER_EVENT_SCOPE(Magicult_ExecuteRequest);
-            GeneratedTriggers = Executor->ExecuteRequest(ExecutionRequests);
+            GeneratedTriggers = Executor->ExecuteRequest(ExecutionRequests, ActionsExecuted);
         }
         GeneratedThisFrame += GeneratedTriggers.Num();
+        ActionsProcessedThisFrame += ActionsExecuted;
 
         // 파생 트리거에 부모 깊이 +1을 실어 전파
         {
@@ -211,10 +234,12 @@ void UCombatSubsystem::ProcessTriggerQueue()
     SET_DWORD_STAT(STAT_Magicult_TriggersProcessed, ProcessedThisFrame);
     SET_DWORD_STAT(STAT_Magicult_TriggersGenerated, GeneratedThisFrame);
     SET_DWORD_STAT(STAT_Magicult_MaxChainDepth, MaxDepthThisFrame);
+    SET_DWORD_STAT(STAT_Magicult_ActionsProcessed, ActionsProcessedThisFrame);
     // counters 채널 → Insights Counters 트랙 (그래프). 매 프레임 세팅해 연속 그래프가 되게 한다.
     TRACE_COUNTER_SET(Magicult_TriggersProcessed, ProcessedThisFrame);
     TRACE_COUNTER_SET(Magicult_TriggersGenerated, GeneratedThisFrame);
     TRACE_COUNTER_SET(Magicult_MaxChainDepth, MaxDepthThisFrame);
+    TRACE_COUNTER_SET(Magicult_ActionsProcessed, ActionsProcessedThisFrame);
 }
 
 bool UCombatSubsystem::IsServer()
