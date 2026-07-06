@@ -124,13 +124,19 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 	// 액션 권한 분리:
 	//   코스메틱(Niagara·Cue) - 서버/클라 모두 실행하되, 전용 서버는 렌더러가 없으므로 스킵
 	//   권위(Damage·GE·Knockback 등) - 서버 전용. 클라이언트는 게임 상태 변경 불가
+	//   SpawnAttackInstance - 그 자체로는 게임 상태를 바꾸지 않는 Trigger 발생기일 뿐이므로
+	//     모든 머신에서 항상 실행한다. 여기서 만들어지는 후속 Trigger(예: ApplyDamage)는
+	//     각자 실행될 때 이 필터를 다시 통과하므로 권위는 그쪽에서 별도로 걸러진다.
 	// TriggerQueue 자체는 서버·클라이언트 양쪽에서 처리되며,
 	// 각 머신은 자신에게 허용된 액션 타입만 실행한다.
 	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
 	                      || Action.ActionType == ESpellActionType::PlayCue;
 
-	if ((bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) ||
-	    (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client)))
+	const bool bAlwaysExecutes = Action.ActionType == ESpellActionType::SpawnAttackInstance;
+
+	if (!bAlwaysExecutes &&
+	    ((bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) ||
+	     (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client))))
 	{
 		// 이 머신에 실행 권한이 없는 액션 - 아무 일도 안 했으므로 프레임 예산 집계에서 제외.
 		FSpellActionExecutionResult SkippedResult;
