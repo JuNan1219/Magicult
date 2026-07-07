@@ -38,7 +38,7 @@ void UKnockbackGameplayAbility::ActivateAbility(
 	const FVector& Force = Payload->Force;
 
 	// ServerOnly라 서버에서만 실행. 일반 CMC 속도를 부여하면 클라는 보정으로 받아 반영한다.
-	Character->LaunchCharacter(Force, true, true);
+	Character->LaunchCharacter(Force, false, false);
 
 	// 속도만 한 번 부여하고 종료(이후 이동은 CMC가 굴림).
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
