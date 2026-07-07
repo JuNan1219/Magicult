@@ -5,6 +5,7 @@
 #include "Components/WidgetComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "BrainComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/AbilitySystem/MagicultAttributeSet.h"
@@ -66,8 +67,14 @@ void AMagicultEnemy::Die()
 		MagicultAIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
 		MagicultAIController->StopMovement();
 
+		// 사망 시 BT 로직을 완전히 정지한다. 시체 상태로 패턴 선택/이동/공격이 계속 도는 것을 막는다.
+		// (LifeSpan으로 파괴되기 전까지 트리가 Combat을 계속 틱하지 않도록)
+		if (UBrainComponent* Brain = MagicultAIController->GetBrainComponent())
+		{
+			Brain->StopLogic(TEXT("Dead"));
+		}
 	}
-	
+
 	Super::Die();
 }
 
