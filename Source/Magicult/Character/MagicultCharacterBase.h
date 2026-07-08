@@ -144,6 +144,16 @@ protected:
 	void ApplyMaxSpeed(float InMaxSpeed);
 	virtual void ApplyMaxSpeed_Implementation(float InMaxSpeed);
 
+	// Debuff.Stunned 태그 변경 콜백. 이동속도 0 처리는 MaxSpeed 어트리뷰트(GE)가 이미 담당하므로,
+	// 여기선 bStunned 갱신 + OnStunnedChanged 훅 호출만 한다.
+	void StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	// 자식 클래스가 스턴 반응을 추가하는 지점(Enemy는 BT Blackboard 미러링, Player는 없음).
+	virtual void OnStunnedChanged(bool bNewStunned);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bStunned = false;
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;

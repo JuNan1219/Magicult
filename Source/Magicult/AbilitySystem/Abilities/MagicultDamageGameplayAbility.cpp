@@ -12,6 +12,7 @@ UMagicultDamageGameplayAbility::UMagicultDamageGameplayAbility()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	bRetriggerInstancedAbility = false;
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
 }
 
 void UMagicultDamageGameplayAbility::ActivateAbility(

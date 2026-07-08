@@ -79,7 +79,7 @@ void UMagicultAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag&
 void UMagicultAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
-	
+
 	for (auto& AbilitySpec : GetActivatableAbilities())
 	{
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))

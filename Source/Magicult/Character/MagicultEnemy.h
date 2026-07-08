@@ -53,11 +53,15 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	bool bHitReacting = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	float LifeSpan = 5;
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
+
+	// Debuff.Stunned를 Blackboard로 미러링해 BT가 데코레이터(Observer Aborts)로 중단할 수 있게 한다.
+	virtual void OnStunnedChanged(bool bNewStunned) override;
 
 	// BT 시작을 한 곳으로 모은다. PossessedBy/InitializeForMatch 호출 순서와 무관하게
 	// 매치가 시작되고 컨트롤러가 준비됐을 때만 실제로 실행된다.

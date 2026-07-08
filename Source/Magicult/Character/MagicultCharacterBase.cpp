@@ -83,7 +83,22 @@ void AMagicultCharacterBase::InitAbilityActorInfo()
 
 		// 이미 값이 들어와 있을 수 있으니 현재값 1회 적용
 		ApplyCurrentMaxSpeed();
+
+		AbilitySystemComponent->RegisterGameplayTagEvent(FMagicultGameplayTags::Get().Debuff_Stunned, EGameplayTagEventType::NewOrRemoved).AddUObject(
+			this,
+			&AMagicultCharacterBase::StunTagChanged
+		);
 	}
+}
+
+void AMagicultCharacterBase::StunTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	bStunned = NewCount > 0;
+	OnStunnedChanged(bStunned);
+}
+
+void AMagicultCharacterBase::OnStunnedChanged(bool bNewStunned)
+{
 }
 
 UAnimMontage* AMagicultCharacterBase::GetHitReactMontage_Implementation()

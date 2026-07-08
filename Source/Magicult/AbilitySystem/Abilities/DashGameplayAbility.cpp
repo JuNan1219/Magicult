@@ -4,12 +4,14 @@
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameFramework/Character.h"
+#include "Magicult/MagicultGameplayTags.h"
 
 UDashGameplayAbility::UDashGameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	bRetriggerInstancedAbility = false;
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
 }
 
 void UDashGameplayAbility::ActivateAbility(

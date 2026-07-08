@@ -6,6 +6,7 @@
 #include "Magicult/Data/InputToTagConfig.h"
 #include "Magicult/Data/MagicInfo.h"
 #include "Magicult/Player/MagicultPlayerController.h"
+#include "Magicult/MagicultGameplayTags.h"
 
 
 USelectModeGameplayAbility::USelectModeGameplayAbility()
@@ -18,6 +19,7 @@ USelectModeGameplayAbility::USelectModeGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	// 같은 카테고리 모드를 다시 눌렀을 때 이미 활성 상태여도 재활성되어 GE가 교체되도록 허용한다.
 	bRetriggerInstancedAbility = true;
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
 }
 
 void USelectModeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
