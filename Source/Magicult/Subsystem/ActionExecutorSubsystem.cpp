@@ -19,7 +19,6 @@
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
 #include "Magicult/Interface/CombatInterface.h"
-#include "Magicult/Interface/ElementCarrierInterface.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Game/MagicultGameInstance.h"
 #include "Magicult/Data/ImmunityPolicy.h"

@@ -4,6 +4,7 @@
 #include "MagicSetupGameplayAbility.h"
 #include "Magicult/Interface/MagicInterface.h"
 #include "Magicult/Component/MagicComponent.h"
+#include "Magicult/MagicultGameplayTags.h"
 
 UMagicSetupGameplayAbility::UMagicSetupGameplayAbility()
 {
@@ -12,6 +13,7 @@ UMagicSetupGameplayAbility::UMagicSetupGameplayAbility()
 	// 실제 SpellTag 적용은 ActivateAbility에서 HasAuthority로 가드되어 서버에서만 수행된다(무예측).
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
 }
 
 void UMagicSetupGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

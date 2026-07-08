@@ -101,6 +101,18 @@ void AMagicultEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 Ne
 	}
 }
 
+void AMagicultEnemy::OnStunnedChanged(bool bNewStunned)
+{
+	if (MagicultAIController && MagicultAIController->GetBlackboardComponent())
+	{
+		MagicultAIController->GetBlackboardComponent()->SetValueAsBool(FName("Stunned"), bNewStunned);
+		if (bNewStunned)
+		{
+			MagicultAIController->StopMovement();
+		}
+	}
+}
+
 void AMagicultEnemy::BeginPlay()
 {
 	Super::BeginPlay();

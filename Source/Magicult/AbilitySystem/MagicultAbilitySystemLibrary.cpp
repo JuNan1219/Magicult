@@ -17,7 +17,6 @@
 #include "Magicult/MagicultAbilityTypes.h"
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/Actor/MagicultProjectile.h"
-#include "Magicult/Interface/ElementCarrierInterface.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Actor/OverlapActor.h"
 #include "Magicult/Data/OverlapActorSpawnParam.h"
