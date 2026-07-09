@@ -112,7 +112,22 @@ void UMagicultAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 	{
 		HandleIncomingDamage(Props);
 	}
+	if (Data.EvaluatedData.Attribute == GetIncomingHealAttribute())
+	{
+		HandleIncomingHeal(Props);
+	}
 }
+
+void UMagicultAttributeSet::HandleIncomingHeal(const FEffectProperties& Props)
+{
+	const float LocalIncomingHeal = GetIncomingHeal();
+	SetIncomingHeal(0.f);
+	if (LocalIncomingHeal > 0.f)
+	{
+		SetHealth(FMath::Clamp(GetHealth() + LocalIncomingHeal, 0.f, GetMaxHealth()));
+	}
+}
+
 void UMagicultAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 {
 	const float LocalIncomingDamage = GetIncomingDamage();

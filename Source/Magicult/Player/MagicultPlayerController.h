@@ -74,6 +74,7 @@ private:
 	TWeakObjectPtr<UMagicultAbilitySystemComponent> MagicultAbilitySystemComponent;
 
 	UMagicultAbilitySystemComponent* GetASC();
+	bool IsStunned();
 
 	UFUNCTION(Server, Unreliable)
 	void ServerSetFacingYaw(float Yaw);
