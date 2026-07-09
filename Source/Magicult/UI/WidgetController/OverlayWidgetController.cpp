@@ -24,6 +24,9 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetMagicultAS()->GetHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
+			// 풀피에서 주기 회복 GE가 적용돼도 PostGameplayEffectExecute의 Clamp로 값이
+			// 그대로면(OldValue==NewValue) 굳이 UI를 다시 갱신하지 않는다.
+			if (FMath::IsNearlyEqual(Data.NewValue, Data.OldValue)) return;
 			OnHealthChanged.Broadcast(Data.NewValue);
 		}
 	);

@@ -43,4 +43,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blackboard")
 	FBlackboardKeySelector CurrentPatternSelector;
+
+	// 새 타겟을 고를 때(패턴이 잠겨있지 않을 때) 최단거리 대상을 고를 확률. 1이면 항상 최단거리,
+	// 낮을수록 플레이어 2명 사이에서 타겟이 갈릴 확률이 높아진다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float ClosestTargetBias = 0.6f;
 };

@@ -48,7 +48,8 @@ void AMagicultEnemy::PossessedBy(AController* NewController)
 
 	// 매치 시작 후에 possess되는 경우(런타임 스폰 등)는 즉시 BT 시작.
 	// 레벨 배치 몬스터는 possess가 먼저라 여기선 시작하지 않고 InitializeForMatch를 기다린다.
-	if (bMatchStarted)
+	// 트리거로 켜야 하는 보스는 여기서도 자동 시작하지 않고 ActivateCombat()을 기다린다.
+	if (bMatchStarted && !bWaitForActivationTrigger)
 	{
 		StartBehaviorTree();
 	}
@@ -131,6 +132,9 @@ void AMagicultEnemy::BeginPlay()
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(MagicultAS->GetHealthAttribute()).AddLambda(
 			[this](const FOnAttributeChangeData& Data)
 			{
+				// 풀피에서 주기 회복 GE가 적용돼도 PostGameplayEffectExecute의 Clamp로 값이
+				// 그대로면(OldValue==NewValue) 굳이 UI를 다시 갱신하지 않는다.
+				if (FMath::IsNearlyEqual(Data.NewValue, Data.OldValue)) return;
 				OnHealthChanged.Broadcast(Data.NewValue);
 			}
 		);
@@ -174,6 +178,15 @@ void AMagicultEnemy::InitializeForMatch(float HealthMultiplier)
 	ApplyHealthRegenEffect();
 
 	bMatchStarted = true;
+	if (!bWaitForActivationTrigger)
+	{
+		StartBehaviorTree();
+	}
+}
+
+void AMagicultEnemy::ActivateCombat()
+{
+	if (!HasAuthority()) return;
 	StartBehaviorTree();
 }
 

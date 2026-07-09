@@ -9,6 +9,7 @@
 #include "Magicult/Input/MagicultInputComponent.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/UI/HUD/MagicultHUD.h"
+#include "Magicult/MagicultGameplayTags.h"
 
 
 AMagicultPlayerController::AMagicultPlayerController()
@@ -26,6 +27,7 @@ void AMagicultPlayerController::PlayerTick(float DeltaTime)
 
 void AMagicultPlayerController::CursorDirection()
 {
+	if (IsStunned()) return;
 	if (!CursorHit.bBlockingHit) return;
 
 	APawn* ControlledPawn = GetPawn<APawn>();
@@ -112,6 +114,12 @@ UMagicultAbilitySystemComponent* AMagicultPlayerController::GetASC()
 	return MagicultAbilitySystemComponent.Get();
 }
 
+bool AMagicultPlayerController::IsStunned()
+{
+	UMagicultAbilitySystemComponent* ASC = GetASC();
+	return ASC && ASC->HasMatchingGameplayTag(FMagicultGameplayTags::Get().Debuff_Stunned);
+}
+
 
 void AMagicultPlayerController::BeginPlay()
 {
@@ -147,6 +155,8 @@ void AMagicultPlayerController::SetupInputComponent()
 
 void AMagicultPlayerController::Move(const FInputActionValue& InputActionValue)
 {
+	if (IsStunned()) return;
+
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 
 	const FRotator Rotation = GetControlRotation();
@@ -176,7 +186,7 @@ void AMagicultPlayerController::Rotation(const FInputActionValue& InputActionVal
 	const float DeltaYaw = AxisValue * RotationSpeed * GetWorld()->GetDeltaSeconds();
 	ControlRot.Yaw = FRotator::NormalizeAxis(ControlRot.Yaw + DeltaYaw);
 
-	SetControlRotation(ControlRot);
+	SetControlRotation(ControlRot); 
 }
 
 void AMagicultPlayerController::HandleMenuInput(const FInputActionValue& InputActionValue)

@@ -107,6 +107,10 @@ public:
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, IncomingDamage);
 
+	UPROPERTY()
+	FGameplayAttributeData IncomingHeal;
+	ATTRIBUTE_ACCESSORS(UMagicultAttributeSet, IncomingHeal);
+
 	/*
 	 * Meta Attributes End
 	 */
@@ -190,6 +194,7 @@ public:
 
 private:
 	void HandleIncomingDamage(const FEffectProperties& Props);
+	void HandleIncomingHeal(const FEffectProperties& Props);
 	void SetEffectProperties(const FGameplayEffectModCallbackData& Data, FEffectProperties& Props) const;
 
 };

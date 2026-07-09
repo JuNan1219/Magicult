@@ -31,6 +31,11 @@ public:
 	// 전원 입장이 확정된 뒤에 인원수에 맞게 초기화되도록 한다.
 	void InitializeForMatch(float HealthMultiplier);
 
+	// bWaitForActivationTrigger가 true인 경우, InitializeForMatch가 AI를 자동으로 켜지 않고
+	// 이 함수가 호출될 때(예: 보스방 트리거)까지 기다린다. 속성/어빌리티는 이미 준비된 상태.
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ActivateCombat();
+
 	/** Combat interface */
 	virtual int32 GetPlayerLevel_Implementation() override;
 	virtual void Die() override;
@@ -56,6 +61,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	float LifeSpan = 5;
+
+	// 타겟 탐지 최대 거리. 0 이하면 무제한(보스방 몬스터 등 항상 타겟을 잡아야 하는 경우).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	float MaxDetectRange = 1500.f;
+
+	// true면 InitializeForMatch에서 BT를 자동으로 켜지 않고 ActivateCombat() 호출을 기다린다.
+	// 보스방 트리거로 전투를 시작시키고 싶은 보스에 켠다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bWaitForActivationTrigger = false;
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;

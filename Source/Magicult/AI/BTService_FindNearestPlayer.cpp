@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/AbilitySystem/MagicultAbilitySystemLibrary.h"
+#include "Magicult/Character/MagicultEnemy.h"
 
 void UBTService_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
@@ -14,6 +15,9 @@ void UBTService_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, u
 
 	APawn* OwningPawn = AIOwner->GetPawn();
 	if (!IsValid(OwningPawn)) return;
+
+	const AMagicultEnemy* OwningEnemy = Cast<AMagicultEnemy>(OwningPawn);
+	const float MaxDetectRange = OwningEnemy ? OwningEnemy->MaxDetectRange : 0.f;
 
 	// 파벌 태그 기반으로 적대 대상 탐색. ICombatInterface 구현체 전체에서 IsNotFriend로 필터링한다.
 	TArray<AActor*> CombatActors;
@@ -28,6 +32,7 @@ void UBTService_FindNearestPlayer::TickNode(UBehaviorTreeComponent& OwnerComp, u
 		if (!UMagicultAbilitySystemLibrary::IsNotFriend(OwningPawn, Actor)) continue;
 
 		const float Distance = OwningPawn->GetDistanceTo(Actor);
+		if (MaxDetectRange > 0.f && Distance > MaxDetectRange) continue;
 		if (Distance < ClosestDistance)
 		{
 			ClosestDistance = Distance;
