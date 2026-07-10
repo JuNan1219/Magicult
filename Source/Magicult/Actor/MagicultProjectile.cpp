@@ -242,8 +242,6 @@ void AMagicultProjectile::OnExpired()
 
 void AMagicultProjectile::UnbindCollisionEvents()
 {
-	UPrimitiveComponent* Collider = GetCollider();
-
 	if (CollisionGuard)
 	{
 		CollisionGuard->OnGuardedCollision.RemoveDynamic(
@@ -255,14 +253,6 @@ void AMagicultProjectile::UnbindCollisionEvents()
 		CollisionGuard->SetCollisionComponent(nullptr);
 		CollisionGuard->Deactivate();
 		CollisionGuard->SetComponentTickEnabled(false);
-	}
-
-	if (Collider)
-	{
-		Collider->OnComponentHit.RemoveDynamic(
-			this,
-			&AMagicultProjectile::HandleHit
-		);
 	}
 
 	if (ProjectileMovement)
@@ -299,18 +289,20 @@ void AMagicultProjectile::BindCollisionPolicy(ESpellCollisionEventPolicy Policy)
 		break;
 
 	case ESpellCollisionEventPolicy::HitOnly:
-		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
+		CollisionGuard->OnGuardedCollision.AddDynamic(this, &AMagicultProjectile::HandleGuardedCollision);
 		break;
 
 	case ESpellCollisionEventPolicy::Bounce:
-		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
+		// 물리 튕김 자체(OnProjectileBounce)는 raw 히트 노이즈가 그대로 필요하므로 안 건드린다.
+		// 데미지 트리거만 CollisionGuard를 거쳐 쿨다운이 적용되게 한다 — 안 그러면 한 번 튕길 때
+		// 노이즈로 발생하는 여러 OnComponentHit마다 Trigger_Hit이 중복으로 나간다.
+		CollisionGuard->OnGuardedCollision.AddDynamic(this, &AMagicultProjectile::HandleGuardedCollision);
 		if (ProjectileMovement)
 			ProjectileMovement->OnProjectileBounce.AddDynamic(this, &ThisClass::HandleProjectileBounce);
 		break;
 
 	case ESpellCollisionEventPolicy::OverlapAndHit:
 		CollisionGuard->OnGuardedCollision.AddDynamic(this, &AMagicultProjectile::HandleGuardedCollision);
-		Collider->OnComponentHit.AddDynamic(this, &ThisClass::HandleHit);
 		break;
 	default:
 		break;
@@ -405,28 +397,6 @@ void AMagicultProjectile::HandleGuardedCollision(const FGuardedCollisionEvent& C
 		TriggerTag,
 		NewContext
 	);
-}
-
-void AMagicultProjectile::HandleHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
-{
-	AActor* SourceAvatar = SpellContext.SourceAbilitySystemComponent.IsValid()
-		? SpellContext.SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
-	if (!OtherActor || !IsValidImpact(SourceAvatar, OtherActor))
-	{
-		return;
-	}
-
-	FGameplayTagContainer TriggerTag;
-	if (OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
-		TriggerTag.AddTag(FMagicultGameplayTags::Get().HitType_Environment);
-
-	FSpellContext NewContext = SpellContext;
-	NewContext.HitResult = Hit;
-	NewContext.bHasHitResult = true;
-	NewContext.TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
-	NewContext.TargetActor = OtherActor;
-
-	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_Hit, TriggerTag, NewContext);
 }
 
 void AMagicultProjectile::HandleProjectileBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity)

@@ -196,6 +196,40 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 		}
 	}
 
+	// ----------------------------------------------------------------
+	// 6) 안전망 — Expire엔 항상 DestroyActor가 걸려있도록 보장한다.
+	// 스펠 데이터에서 깜빡 빠뜨려도 발사체가 영원히 안 사라지는 사고를 막는다.
+	// 데이터에 이미 해당 트리거용 DestroyActor가 있으면 건드리지 않는다(override 가능).
+	// Depleted는 스펠 데이터에서 직접 관리하므로 여기서 건드리지 않는다.
+	// ----------------------------------------------------------------
+	auto EnsureDestroyOnTrigger = [&Resolved](const FGameplayTag& TriggerTag)
+	{
+		const bool bAlreadyBound = Resolved.TriggerActionBindings.ContainsByPredicate(
+			[&TriggerTag](const FSpellTriggerActionBinding& Binding)
+			{
+				return Binding.Trigger.TriggerTag == TriggerTag &&
+					Binding.Actions.ContainsByPredicate([](const FSpellActionSpec& Action)
+						{
+							return Action.ActionType == ESpellActionType::DestroyActor;
+						});
+			});
+
+		if (bAlreadyBound)
+		{
+			return;
+		}
+
+		FSpellActionSpec DestroyAction;
+		DestroyAction.ActionType = ESpellActionType::DestroyActor;
+
+		FSpellTriggerActionBinding NewBinding;
+		NewBinding.Trigger.TriggerTag = TriggerTag;
+		NewBinding.Actions.Add(DestroyAction);
+		Resolved.TriggerActionBindings.Add(NewBinding);
+	};
+
+	EnsureDestroyOnTrigger(FMagicultGameplayTags::Get().Trigger_Projectile_Expire);
+
 	return Resolved;
 }
 

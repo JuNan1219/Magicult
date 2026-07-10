@@ -77,6 +77,8 @@ void AMagicultEnemy::Die()
 	}
 
 	Super::Die();
+
+	OnDeath.Broadcast(this);
 }
 
 void AMagicultEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
