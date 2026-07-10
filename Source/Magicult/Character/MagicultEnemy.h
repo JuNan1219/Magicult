@@ -14,6 +14,8 @@ class UBehaviorTree;
 class AMagicultAIController;
 class AController;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyDiedSignature, AMagicultEnemy*, DeadEnemy);
+
 /**
  * 
  */
@@ -53,6 +55,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnFloatChangedSignature OnMaxHealthChanged;
+
+	// 방 클리어 조건 등, 외부에서 이 몬스터의 사망을 구독하고 싶을 때 사용(예: RoomClear 트리거).
+	UPROPERTY(BlueprintAssignable)
+	FOnEnemyDiedSignature OnDeath;
 
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 

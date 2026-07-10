@@ -13,6 +13,9 @@ ADoorActor::ADoorActor()
 	SetRootComponent(DoorBox);
 	DoorBox->SetBoxExtent(FVector(50.f, 150.f, 150.f));
 	DoorBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 캐릭터 캡슐(MagicultCharacterBase)이 WorldStatic/Pawn만 Block하고 WorldDynamic은
+	// Ignore하도록 짜여있어서(생성자 참고), 기본 Object Type(WorldDynamic)으론 절대 안 막힌다.
+	DoorBox->SetCollisionObjectType(ECollisionChannel::ECC_WorldStatic);
 	DoorBox->SetCollisionResponseToAllChannels(ECR_Block);
 }
 
@@ -33,14 +36,14 @@ void ADoorActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ADoorActor, bClosed);
 }
 
-void ADoorActor::CloseDoor_Implementation()
+void ADoorActor::CloseDoor()
 {
 	if (!HasAuthority()) return;
 	bClosed = true;
 	ApplyDoorState();
 }
 
-void ADoorActor::OpenDoor_Implementation()
+void ADoorActor::OpenDoor()
 {
 	if (!HasAuthority()) return;
 	bClosed = false;
@@ -55,4 +58,5 @@ void ADoorActor::OnRep_Closed()
 void ADoorActor::ApplyDoorState()
 {
 	DoorBox->SetCollisionEnabled(bClosed ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+	OnDoorStateChanged(bClosed);
 }

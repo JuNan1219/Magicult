@@ -20,15 +20,11 @@ class MAGICULT_API ADoorActor : public AActor
 public:
 	ADoorActor();
 
-	// BlueprintNativeEvent라 BP 서브클래스에서 오버라이드해 플레인 메쉬 표시/애니메이션 등을
-	// 덧붙일 수 있다(Call Parent Function으로 콜리전 토글은 그대로 유지 가능).
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Door")
+	UFUNCTION(BlueprintCallable, Category = "Door")
 	void CloseDoor();
-	virtual void CloseDoor_Implementation();
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Door")
+	UFUNCTION(BlueprintCallable, Category = "Door")
 	void OpenDoor();
-	virtual void OpenDoor_Implementation();
 
 protected:
 	virtual void BeginPlay() override;
@@ -41,6 +37,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Door")
 	bool bStartClosed = false;
 
+	// 콜리전 토글 이후 항상 호출된다 — BeginPlay(bStartClosed), OnRep_Closed(리모트 클라 동기화),
+	// CloseDoor/OpenDoor(명시적 호출) 세 경로 전부 여기로 모여서 BP가 하나의 이벤트만 오버라이드하면
+	// 어느 경로로 상태가 바뀌든 비주얼(플레인 등)이 항상 따라온다.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Door")
+	void OnDoorStateChanged(bool bNewClosed);
 private:
 	UFUNCTION()
 	void OnRep_Closed();
