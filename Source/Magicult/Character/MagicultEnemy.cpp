@@ -76,9 +76,45 @@ void AMagicultEnemy::Die()
 		}
 	}
 
+	// 래그돌/파괴 전에 드랍을 스폰한다(서버 권한에서만).
+	SpawnLoot();
+
 	Super::Die();
 
 	OnDeath.Broadcast(this);
+}
+
+void AMagicultEnemy::SpawnLoot()
+{
+	// 오버랩/사망 경로가 클라에서도 탈 수 있으므로 권한을 명시적으로 가드한다.
+	// 스폰 액터는 bReplicates=true라 서버 스폰만으로 클라에 복제된다(중복 스폰 방지).
+	if (!HasAuthority()) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	const FVector BaseLocation = GetActorLocation();
+
+	for (const FMagicultLootDrop& Drop : LootDrops)
+	{
+		if (!Drop.ItemClass) continue;
+
+		for (int32 i = 0; i < Drop.MaxCount; ++i)
+		{
+			// [0,100) 범위 판정. DropChance=100이면 항상, 0이면 절대 스폰 안 됨
+			// (Aura의 FRandRange(1,100) off-by-one을 피한다).
+			if (FMath::FRandRange(0.f, 100.f) >= Drop.DropChance) continue;
+
+			// 여러 개가 한 점에 겹치지 않도록 XY로 살짝 흩뿌리고 살짝 띄운다.
+			const FVector Offset(FMath::RandRange(-60.f, 60.f), FMath::RandRange(-60.f, 60.f), 40.f);
+			const FTransform SpawnTransform(FRotator::ZeroRotator, BaseLocation + Offset);
+
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			World->SpawnActor<AActor>(Drop.ItemClass, SpawnTransform, Params);
+		}
+	}
 }
 
 void AMagicultEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
