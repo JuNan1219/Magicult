@@ -3,6 +3,8 @@
 
 #include "MagicultAbilitySystemLibrary.h"
 #include "Magicult/AbilitySystem/Abilities/MagicultPassiveAbility.h"
+#include "Magicult/AbilitySystem/Abilities/MagicultGameplayAbility.h"
+#include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraSystem.h"
 #include "Magicult/Player/MagicultPlayerState.h"
@@ -166,6 +168,72 @@ void UMagicultAbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldCon
 			ASC->TryActivateAbility(Handle);
 		}
 	}
+}
+
+// GrantActiveAbility/GrantPassiveAbility 공통 후처리: MagicMenu가 즉시 Unlocked로 갱신되도록 알린다.
+// UpdateAbilityStatuses()의 ClientUpdateAbilityStatus 호출과 동일한 경로를 재사용한다.
+static void NotifyMagicMenuUnlocked(UAbilitySystemComponent* ASC, const FGameplayAbilitySpec& Spec, int32 Level)
+{
+	if (UMagicultAbilitySystemComponent* MagicultASC = Cast<UMagicultAbilitySystemComponent>(ASC))
+	{
+		const FGameplayTag AbilityTag = UMagicultAbilitySystemComponent::GetAbilityTagFromSpec(Spec);
+		if (AbilityTag.IsValid())
+		{
+			MagicultASC->ClientUpdateAbilityStatus(AbilityTag, FMagicultGameplayTags::Get().Magic_Status_Unlocked, Level);
+		}
+	}
+}
+
+FGameplayAbilitySpecHandle UMagicultAbilitySystemLibrary::GrantActiveAbility(UAbilitySystemComponent* ASC, TSubclassOf<UGameplayAbility> AbilityClass, int32 Level)
+{
+	if (!ASC || !AbilityClass) return FGameplayAbilitySpecHandle();
+
+	// 이미 보유 중이면 새로 부여하지 않고 기존 핸들만 반환한다(중복 스펙 방지).
+	if (FGameplayAbilitySpec* ExistingSpec = ASC->FindAbilitySpecFromClass(AbilityClass))
+	{
+		return ExistingSpec->Handle;
+	}
+
+	FGameplayAbilitySpec Spec(AbilityClass, Level);
+	if (!Cast<UMagicultGameplayAbility>(Spec.Ability))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GrantActiveAbility: 일반 Ability Give 시도 %s"), *AbilityClass->GetName());
+		return FGameplayAbilitySpecHandle();
+	}
+
+	// UpdateAbilityStatuses()와 동일하게 Unlocked를 스탬프해야 MagicMenu가 이 스펙을 Unlocked로 인식한다.
+	Spec.DynamicAbilityTags.AddTag(FMagicultGameplayTags::Get().Magic_Status_Unlocked);
+	const FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(Spec);
+
+	NotifyMagicMenuUnlocked(ASC, Spec, Level);
+
+	return Handle;
+}
+
+FGameplayAbilitySpecHandle UMagicultAbilitySystemLibrary::GrantPassiveAbility(UAbilitySystemComponent* ASC, TSubclassOf<UGameplayAbility> AbilityClass, int32 Level)
+{
+	if (!ASC || !AbilityClass) return FGameplayAbilitySpecHandle();
+
+	if (FGameplayAbilitySpec* ExistingSpec = ASC->FindAbilitySpecFromClass(AbilityClass))
+	{
+		return ExistingSpec->Handle;
+	}
+
+	FGameplayAbilitySpec Spec(AbilityClass, Level);
+	if (!Cast<UMagicultPassiveAbility>(Spec.Ability))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GrantPassiveAbility: 일반 Ability Give 시도 %s"), *AbilityClass->GetName());
+		return FGameplayAbilitySpecHandle();
+	}
+
+	Spec.DynamicAbilityTags.AddTag(FMagicultGameplayTags::Get().Magic_Status_Unlocked);
+	const FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(Spec);
+	// Infinite 패시브라 GiveAbilityAndActivateOnce는 사용 불가 — GiveAbility + TryActivateAbility 조합 필수.
+	ASC->TryActivateAbility(Handle);
+
+	NotifyMagicMenuUnlocked(ASC, Spec, Level);
+
+	return Handle;
 }
 
 FGameplayEffectContextHandle UMagicultAbilitySystemLibrary::ApplyDamageEffect(const FAttackApplyParams& AttackApplyParams)
