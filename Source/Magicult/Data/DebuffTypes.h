@@ -8,6 +8,7 @@ class UGameplayEffect;
 UENUM(BlueprintType)
 enum class EDebuffEffectType : uint8
 {
+    None,
     Slow,
     PeriodicDamage,
 };
@@ -48,7 +49,7 @@ struct FDebuffEffectEntry
     FGameplayTag Tag;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    EDebuffEffectType Type;
+    EDebuffEffectType Type = EDebuffEffectType::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TSubclassOf<UGameplayEffect> EffectClass;

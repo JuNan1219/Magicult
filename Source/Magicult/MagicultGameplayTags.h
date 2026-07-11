@@ -136,12 +136,16 @@ public:
 	FGameplayTag Immunity_Debuff_Effect_Slow;
 	FGameplayTag Immunity_Debuff_Effect_PeriodicDamage;
 	FGameplayTag Immunity_Stun;
+	FGameplayTag Immunity_Interrupt_AttackCancel;
 
 	// Action 태그
 	FGameplayTag Action_Damage;
 	FGameplayTag Action_RadialDamage;
 	FGameplayTag Action_Knockback;
 	FGameplayTag Action_Debuff;
+
+	// Interrupt 서브 태그 (InterruptSpec 식별용)
+	FGameplayTag Interrupt_AttackCancel;
 
 	// Debuff 서브 이펙트 태그
 	FGameplayTag Debuff_Effect_Slow;

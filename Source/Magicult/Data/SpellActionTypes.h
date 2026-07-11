@@ -163,6 +163,10 @@ struct FSpellInterruptActionSpec
 {
 	GENERATED_BODY()
 
+	// 이 인터럽트를 식별하는 태그. ImmunityPolicy의 SubjectTag와 매칭되어 룰 단위로 면역을 걸 수 있다 (예: Interrupt.AttackCancel).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Interrupt")
+	FGameplayTag InterruptTag;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Interrupt")
 	FGameplayTagContainer CancelTags;
 };

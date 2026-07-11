@@ -710,12 +710,16 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Immunity_Debuff_Effect_Slow = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Debuff.Effect.Slow"), FString(""));
 	GameplayTags.Immunity_Debuff_Effect_PeriodicDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Debuff.Effect.PeriodicDamage"), FString(""));
 	GameplayTags.Immunity_Stun = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Stun"), FString(""));
+	GameplayTags.Immunity_Interrupt_AttackCancel = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Immunity.Interrupt.AttackCancel"), FString(""));
 
 	// Action
 	GameplayTags.Action_Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Damage"), FString(""));
 	GameplayTags.Action_RadialDamage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.RadialDamage"), FString(""));
 	GameplayTags.Action_Knockback = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Knockback"), FString(""));
 	GameplayTags.Action_Debuff = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Action.Debuff"), FString(""));
+
+	// Interrupt
+	GameplayTags.Interrupt_AttackCancel = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Interrupt.AttackCancel"), FString(""));
 
 	// Debuff Effect
 	GameplayTags.Debuff_Effect_Slow = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Debuff.Effect.Slow"), FString(""));

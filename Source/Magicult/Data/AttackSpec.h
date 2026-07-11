@@ -13,10 +13,10 @@ struct FAttackSpec
 	FGameplayTag ElementTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ElementRatio;
+	float ElementRatio = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float BaseDamage;
+	float BaseDamage = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bUseVelocityDamage = true;
