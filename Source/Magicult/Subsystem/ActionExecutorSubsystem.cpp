@@ -318,7 +318,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 
 	// 사망한 대상에게는 디버프 적용 안 함
 	AActor* TargetActor = Context.TargetActor.Get();
-	if (TargetActor && ICombatInterface::Execute_IsDead(TargetActor))
+	if (TargetActor && TargetActor->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(TargetActor))
 	{
 		return FSpellActionExecutionResult(false);
 	}

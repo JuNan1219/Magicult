@@ -13,6 +13,8 @@ void ATrapActor::BeginPlay()
 
 void ATrapActor::StopTrap_Implementation()
 {
+    UE_LOG(LogTemp, Warning, TEXT("[%s] ATrapActor::StopTrap_Implementation (C++ base) reached"), *GetName());
+
     bTrapActive = false;
 
     // 데미지 판정 끄기
@@ -21,6 +23,8 @@ void ATrapActor::StopTrap_Implementation()
 
 void ATrapActor::StartTrap_Implementation()
 {
+    UE_LOG(LogTemp, Warning, TEXT("[%s] ATrapActor::StartTrap_Implementation (C++ base) reached"), *GetName());
+
     bTrapActive = true;
 
     SetActorEnableCollision(true);
