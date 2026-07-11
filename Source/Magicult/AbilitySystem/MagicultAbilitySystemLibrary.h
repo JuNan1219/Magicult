@@ -58,6 +58,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|CharacterClassDefaults")
 	static void GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
 
+	/*
+	* Runtime Ability Grant (아이템 습득 등 게임 중 임의 시점에 GA 부여)
+	* GiveStartupAbilities와 달리 이미 보유 중이면 기존 핸들만 반환(중복 부여 방지)하고,
+	* DynamicAbilityTags에 Magic.Status.Unlocked를 스탬프해 MagicMenu에도 반영되게 한다.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|Abilities")
+	static FGameplayAbilitySpecHandle GrantActiveAbility(UAbilitySystemComponent* ASC, TSubclassOf<UGameplayAbility> AbilityClass, int32 Level = 1);
+
+	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|Abilities")
+	static FGameplayAbilitySpecHandle GrantPassiveAbility(UAbilitySystemComponent* ASC, TSubclassOf<UGameplayAbility> AbilityClass, int32 Level = 1);
+
 	UFUNCTION(BlueprintCallable, Category = "MagicultAbilitySystemLibrary|DamageEffect")
 	static FGameplayEffectContextHandle ApplyDamageEffect(const FAttackApplyParams& AttackApplyParams);
 
