@@ -16,8 +16,27 @@ class AController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyDiedSignature, AMagicultEnemy*, DeadEnemy);
 
+// 몬스터 사망 시 드랍할 아이템 1종의 설정. 개별 몬스터 인스턴스마다 배열로 지정한다.
+USTRUCT(BlueprintType)
+struct FMagicultLootDrop
+{
+	GENERATED_BODY()
+
+	// 드랍할 아이템 액터 클래스 (예: BP_Item_DefaultDirection). 이 액터가 습득 시 GA를 부여한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+	TSubclassOf<AActor> ItemClass;
+
+	// 드랍 확률 (0~100%). MaxCount만큼 개별 판정한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot", meta = (ClampMin = "0.0", ClampMax = "100.0"))
+	float DropChance = 100.f;
+
+	// 최대 드랍 개수. 각 개수마다 DropChance로 개별 판정한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot", meta = (ClampMin = "1"))
+	int32 MaxCount = 1;
+};
+
 /**
- * 
+ *
  */
 UCLASS()
 class MAGICULT_API AMagicultEnemy : public AMagicultCharacterBase, public IEnemyInterface
@@ -76,6 +95,10 @@ public:
 	// 보스방 트리거로 전투를 시작시키고 싶은 보스에 켠다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bWaitForActivationTrigger = false;
+
+	// 사망 시 드랍할 아이템 목록. 개별 몬스터 인스턴스마다 지정한다(비어있으면 드랍 없음).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+	TArray<FMagicultLootDrop> LootDrops;
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
@@ -86,6 +109,9 @@ protected:
 	// BT 시작을 한 곳으로 모은다. PossessedBy/InitializeForMatch 호출 순서와 무관하게
 	// 매치가 시작되고 컨트롤러가 준비됐을 때만 실제로 실행된다.
 	void StartBehaviorTree();
+
+	// LootDrops를 순회하며 확률 판정 후 아이템 액터를 스폰한다. 서버 권한에서만 실행.
+	void SpawnLoot();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Class Defaults")
 	int32 Level = 1;
