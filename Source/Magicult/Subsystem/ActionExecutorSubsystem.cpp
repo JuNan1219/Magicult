@@ -827,6 +827,9 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteInterrupt(
 	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
 	if (!TargetASC || InterruptSpec.CancelTags.IsEmpty()) return FSpellActionExecutionResult(false);
 
+	if (InterruptSpec.InterruptTag.IsValid() && CheckImmunity(InterruptSpec.InterruptTag, Context))
+		return FSpellActionExecutionResult(false);
+
 	TargetASC->CancelAbilities(&InterruptSpec.CancelTags);
 	return FSpellActionExecutionResult(true);
 }
