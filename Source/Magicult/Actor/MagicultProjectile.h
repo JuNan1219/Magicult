@@ -124,7 +124,7 @@ protected:
 	FAttackSpec AttackSpec;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Runtime")
-	float LifeSpan = 3.f;
+	float LifeSpan = 5.f;
 
 	UPROPERTY(BlueprintReadOnly)
 	float RehitCooldown = 0.5f;

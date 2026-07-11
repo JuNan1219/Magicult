@@ -94,7 +94,7 @@ void UMagicultAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 	FEffectProperties Props;
 	SetEffectProperties(Data, Props);
 
-	if (Props.TargetCharacter->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(Props.TargetCharacter)) return;
+	if (Props.TargetCharacter && Props.TargetCharacter->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(Props.TargetCharacter)) return;
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
