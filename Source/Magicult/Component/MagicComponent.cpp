@@ -32,6 +32,11 @@ void UMagicComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	// 호출하는 GA도 (HasAuthority || IsLocallyControlled)로 소유 클라에서 로컬 실행되므로,
 	// 소유 클라는 이미 직접 SetVisibility를 호출한 상태다. COND_SkipOwner로 중복/지연 덮어쓰기를 막는다.
 	DOREPLIFETIME_CONDITION(UMagicComponent, bMagicCircleActive, COND_SkipOwner);
+
+	// 기본 방향/속도는 서버 전용 GA에서만 세팅되어 소유 클라에 로컬 대응 로직이 없다.
+	// COND_SkipOwner를 쓰면 소유 클라만 기본값을 모르게 되므로 조건 없이 전체 복제한다.
+	DOREPLIFETIME(UMagicComponent, DefaultDirectionTag);
+	DOREPLIFETIME(UMagicComponent, DefaultSpeedTag);
 }
 
 void UMagicComponent::OnRep_CurrentSpellState()
@@ -204,8 +209,40 @@ void UMagicComponent::UpdateMagicCircleDirection(const FGameplayTag& DirectionTa
 	MagicCircle->SetRelativeRotation(FRotator(Pitch, 0.f, 0.f));
 }
 
+void UMagicComponent::SetDefaultDirectionTag(const FGameplayTag& InDirectionTag)
+{
+	DefaultDirectionTag = InDirectionTag;
+
+	// 습득 시점에 이미 조합 중이라 방향을 골라둔 상태라면 덮어쓰지 않는다.
+	if (!CurrentSpellState.DirectionTag.IsValid())
+	{
+		SetSpellDirectionTag(InDirectionTag);
+	}
+}
+
+void UMagicComponent::SetDefaultSpeedTag(const FGameplayTag& InSpeedTag)
+{
+	DefaultSpeedTag = InSpeedTag;
+
+	if (!CurrentSpellState.SpeedTag.IsValid())
+	{
+		SetSpellSpeedTag(InSpeedTag);
+	}
+}
+
 void UMagicComponent::ClearSpellState()
 {
 	CurrentSpellState.Clear();
+
+	// 방향/속도는 독립 아이템이므로 각 기본값의 유효성을 따로 검사해 복원한다.
+	if (DefaultDirectionTag.IsValid())
+	{
+		CurrentSpellState.DirectionTag = DefaultDirectionTag;
+	}
+	if (DefaultSpeedTag.IsValid())
+	{
+		CurrentSpellState.SpeedTag = DefaultSpeedTag;
+	}
+
 	OnChangedCurrentSpellState.Broadcast(CurrentSpellState, FGameplayTag());
 }

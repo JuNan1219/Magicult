@@ -77,9 +77,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Magic")
 	void ClearSpellState();
 
+	// 기본 방향/속도 부여 (아이템 픽업 → 패시브 GA에서 서버 권위로 호출).
+	// 방향/속도는 서로 독립적인 아이템이므로 하나의 플래그로 묶지 않고 각 태그의 유효성으로 판단한다.
+	UFUNCTION(BlueprintCallable, Category = "Magic")
+	void SetDefaultDirectionTag(const FGameplayTag& InDirectionTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Magic")
+	void SetDefaultSpeedTag(const FGameplayTag& InSpeedTag);
+
 protected:
 	virtual void BeginPlay() override;
 private:
+	// ClearSpellState()가 매 MagicMode 진입마다 CurrentSpellState를 비운 뒤 이 기본값들로 복원한다.
+	// GA가 서버 전용으로만 활성화되어 소유 클라에 로컬 대응 로직이 없으므로 COND_SkipOwner 없이 전체 복제한다.
+	UPROPERTY(Replicated)
+	FGameplayTag DefaultDirectionTag;
+
+	UPROPERTY(Replicated)
+	FGameplayTag DefaultSpeedTag;
 	UPROPERTY(EditAnywhere, Category = "Magic")
 	TObjectPtr<UMagicCircleInfo> MagicCircleMaterials;
 
