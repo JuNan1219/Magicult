@@ -25,10 +25,7 @@ void URadialAttackInstance::SetAttackSpec(const FAttackSpec& InAttackSpec)
 {
 	Super::SetAttackSpec(InAttackSpec);
 
-	// 여기까지 왔다는 건 부모 Spec을 물려받는 경로다(bOverride=true).
-	// 폭발은 정지체이므로 발사체에서 딸려온 속도 기반 데미지를 끈다
-	// (구 ExecuteRadialDamage의 IsRadialDamage=true와 동일 효과). 자기 기본 Spec을 쓰는
-	// 경우(bOverride=false)엔 SetAttackSpec이 호출되지 않아 BP 설정이 그대로 존중된다.
+	// 폭발은 정지체이므로 발사체에서 딸려온 속도 기반 데미지를 끈다.
 	AttackSpec.bUseVelocityDamage = false;
 }
 

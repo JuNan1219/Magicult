@@ -198,24 +198,11 @@ struct FSpellProjectileFeatureSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feature")
 	FGameplayTag FeatureTag;
 
-	/**
-	 * 이 feature가 기대하는 충돌 이벤트 방식.
-	 * 예:
-	 * - Pierce: 보통 Hit
-	 * - Shield: 보통 Overlap
-	 */
+	// 이 feature가 기대하는 충돌 이벤트 방식(예: Pierce는 보통 Hit, Shield는 보통 Overlap).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feature")
 	ESpellCollisionEventPolicy CollisionEventPolicy = ESpellCollisionEventPolicy::OverlapOnly;
 
-	/**
-	 * feature 고유 trigger-action.
-	 * 예:
-	 * - Pierce feature:
-	 *   OnWorldHit -> DestroyProjectile
-	 *   OnPierceDepleted -> DestroyProjectile
-	 * - Bounce feature:
-	 *   OnBounceDepleted -> DestroyProjectile
-	 */
+	// feature 고유 trigger-action(예: Pierce는 OnWorldHit/OnPierceDepleted, Bounce는 OnBounceDepleted에 DestroyProjectile 바인딩).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Feature", meta = (TitleProperty = "Trigger"))
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
 

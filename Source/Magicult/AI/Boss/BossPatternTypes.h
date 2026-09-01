@@ -19,13 +19,10 @@ enum class EBossPattern : uint8
 };
 
 /**
- * 패턴 1종의 정적 데이터.
- *
- * 초기에는 DataAsset 없이 UBossCombatComponent가 직접 배열로 보관한다.
- * 나중에 CharacterClassInfo/ElementInteractionRules처럼 DataAsset으로 승격할 수 있다.
- *
- * 거리 조건(ExecuteMin/MaxRange)은 "지금 당장 실행 가능한가"에만 쓴다.
- * "이번에 이 패턴을 고를 수 있는가"는 점수 계산(BaseScore/DistanceWeight 등)으로 판단한다.
+ * 패턴 1종의 정적 데이터. 초기에는 DataAsset 없이 UBossCombatComponent가 배열로 직접 보관한다
+ * (나중에 CharacterClassInfo/ElementInteractionRules처럼 DataAsset으로 승격 가능).
+ * 거리 조건(ExecuteMin/MaxRange)은 "지금 당장 실행 가능한가"에만 쓰고, "이번에 이 패턴을
+ * 고를 수 있는가"는 점수 계산(BaseScore/DistanceWeight 등)으로 판단한다.
  */
 USTRUCT(BlueprintType)
 struct FBossAttackPatternData

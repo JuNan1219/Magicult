@@ -12,6 +12,7 @@ UDashGameplayAbility::UDashGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	bRetriggerInstancedAbility = false;
 	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Character_State_Dead);
 }
 
 void UDashGameplayAbility::ActivateAbility(
@@ -139,7 +140,7 @@ void UDashGameplayAbility::OnDashFinished()
 void UDashGameplayAbility::OnMontageCompleted()
 {
 	// 의도적으로 비워둠.
-	// 대시 종료는 DashTask->OnFinish 하나로만 처리.
+	// 대시 종료는 DashTask의 OnTimedOut 계열 콜백(OnDashFinished)에서만 처리.
 }
 
 void UDashGameplayAbility::OnMontageInterrupted()

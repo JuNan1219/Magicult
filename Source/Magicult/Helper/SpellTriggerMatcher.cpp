@@ -101,6 +101,7 @@ uint8 FSpellTriggerMatcher::GetRequiredFlagsForActionType(ESpellActionType Actio
 	// default 없음 — 새 ActionType 추가 시 여기도 반드시 채워야 컴파일됨
 	}
 
-	// 알 수 없는 ActionType — 모든 플래그 요구해서 실행 차단
+	// 스위치가 다루지 못하는 값(캐스팅 등) 대비 필수 반환 경로. RequiredFlags가 None이라
+	// 실제로는 컨텍스트 검사를 항상 통과시킨다(막지 않음).
 	return None;
 }

@@ -114,12 +114,10 @@ void UMagicultAbilitySystemLibrary::InitializeDefaultAttributes(const UObject* W
 	ApplyEffectToSelf(CharacterClassInfo->SecondaryAttributes);
 	ApplyEffectToSelf(CharacterClassInfo->VitalAttributes);
 
-	// 인원수 체력 배율. Infinite Modifier GE로 배율을 걸면 CurrentValue만 바뀌고 BaseValue는 그대로라,
-	// EGameplayEffectReplicationMode::Minimal인 Enemy ASC에서는 ActiveGameplayEffects 자체가
-	// 클라에 복제되지 않아 클라 로컬 Aggregator가 배율 없는 BaseValue로 CurrentValue를 재계산해버린다
-	// (MaxHealth만 서버-클라 불일치가 나던 원인). SetNumericAttributeBase로 BaseValue 자체에
-	// 스케일된 최종값을 박아 Health와 동일한 방식으로 복제되게 한다.
-	// 배율이 1이거나 비정상(0 이하)이면 스킵 → 플레이어 등 기본 호출자는 영향 없음.
+	// 인원수 체력 배율: Infinite GE로 걸면 CurrentValue만 바뀌고 BaseValue는 그대로라,
+	// ReplicationMode::Minimal인 Enemy ASC는 GE 자체가 복제되지 않아 클라가 배율 없는
+	// BaseValue로 재계산해 서버-클라 불일치가 난다. SetNumericAttributeBase로 BaseValue에
+	// 직접 스케일된 값을 박아 Health와 동일하게 복제되게 한다(배율 비정상 시 스킵).
 	if (HealthMultiplier > 0.f && !FMath::IsNearlyEqual(HealthMultiplier, 1.f))
 	{
 		const float BaseMaxHealth = ASC->GetNumericAttribute(UMagicultAttributeSet::GetMaxHealthAttribute());

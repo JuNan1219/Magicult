@@ -77,7 +77,7 @@ public:
 		*NewContext = *this;
 		if (GetHitResult())
 		{
-			// Does a deep copy of the hit result
+			// HitResult를 깊은 복사
 			NewContext->AddHitResult(*GetHitResult(), true);
 		}
 		NewContext->AttackContext = AttackContext;
@@ -96,7 +96,7 @@ struct TStructOpsTypeTraits< FMagicultGameplayEffectContext > : public TStructOp
 	enum
 	{
 		WithNetSerializer = true,
-		WithCopy = true		// Necessary so that TSharedPtr<FHitResult> Data is copied around
+		WithCopy = true		// TSharedPtr<FHitResult> 데이터가 함께 복사되도록 필요
 	};
 };
 

@@ -54,7 +54,6 @@ void UDebuffVisualComponent::TryInitializeWithASC()
 
 void UDebuffVisualComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// 등록한 태그 이벤트 핸들 해제
 	if (CachedASC.IsValid())
 	{
 		for (auto& [Tag, Handle] : TagEventHandles)
@@ -92,10 +91,8 @@ void UDebuffVisualComponent::OnDebuffTagChanged(const FGameplayTag Tag, int32 Ne
 
 void UDebuffVisualComponent::AddDebuffVisual(const FGameplayTag& Tag)
 {
-	// 중복 생성 방지
 	if (ActiveDebuffComponents.Contains(Tag)) return;
 
-	// 전용 NiagaraSystem 검색
 	const FDebuffVisualEntry* Entry = DebuffVisuals.FindByPredicate([&Tag](const FDebuffVisualEntry& E)
 	{
 		return E.DebuffTag == Tag;

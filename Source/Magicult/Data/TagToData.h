@@ -24,15 +24,12 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TMap<FGameplayTag, float> FloatValues;
 
-    // 클래스 참조형
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TMap<FGameplayTag, TSubclassOf<AActor>> ClassValues;
 
-    // 나이아가라 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TMap<FGameplayTag, TObjectPtr<UNiagaraSystem>> NiagaraValues;
 
-    // 레벨별 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TMap<FGameplayTag, FScalableFloat> ScalableFloatValues;
 };

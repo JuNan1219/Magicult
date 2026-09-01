@@ -157,18 +157,11 @@ float UExecCalc_Damage::CalcImpactDamage(const FVector& VelocityA, const FVector
 		return BaseDamage;
 	}
 
-	// 상대속도
 	const FVector RelativeVelocity = VelocityA - VelocityB;
-
-	// 상대속도의 크기
 	const float RelativeSpeed = RelativeVelocity.Size();
 
-	// 속도를 기준값으로 나눠 배율 계산
 	float DamageMultiplier = RelativeSpeed / SpeedDivisor;
-
-	// 너무 작거나 너무 커지는 것 방지
 	DamageMultiplier = FMath::Clamp(DamageMultiplier, MinMultiplier, MaxMultiplier);
 
-	// 최종 데미지
 	return BaseDamage * DamageMultiplier;
 }

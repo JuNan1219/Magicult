@@ -113,7 +113,6 @@ struct FSpellSpawnAttackInstanceActionSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance")
 	ESpellActionTargetPolicy OriginPolicy = ESpellActionTargetPolicy::HitLocation;
 
-	// SocketTransform 정책일 때만 사용.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|SpawnAttackInstance",
 		meta = (EditCondition = "OriginPolicy == ESpellActionTargetPolicy::SocketTransform", EditConditionHides))
 	FGameplayTag SocketTag;

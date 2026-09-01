@@ -156,10 +156,6 @@ void UMagicultAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 				TargetCharacter->ApplyCombatTimeout();
 			}
 		}
-
-		/*
-		ShowFloatingText(Props, LocalIncomingDamage, bBlock, bCriticalHit);
-		*/
 	}
 }
 void UMagicultAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth) const

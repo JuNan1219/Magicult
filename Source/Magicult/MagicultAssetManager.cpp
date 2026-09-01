@@ -24,6 +24,6 @@ void UMagicultAssetManager::StartInitialLoading()
 	Super::StartInitialLoading();
 	FMagicultGameplayTags::InitializeNativeGameplayTags();
 
-	// This is required to use Target Data!
+	// TargetData(GameplayAbilityTargetData) 사용을 위해 필요
 	UAbilitySystemGlobals::Get().InitGlobalData();
 }

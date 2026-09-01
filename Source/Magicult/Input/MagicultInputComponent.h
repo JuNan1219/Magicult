@@ -32,27 +32,21 @@ void UMagicultInputComponent::BindAbilityActions(const UMagicultInputConfig* Inp
 	{
 		if (Action.InputAction && Action.InputTag.IsValid())
 		{
-			// 1. Press 이벤트 바인딩
-			// Action.AllowedBindings에 BindPress 플래그가 설정되어 있는지 확인합니다.
 			if (PressedFunc && (Action.AllowedBindings & (uint8)FBindings::BindPress))
 			{
-				// ETriggerEvent::Started는 입력이 처음 눌렸을 때 발생합니다.
+				// ETriggerEvent::Started = 입력이 처음 눌린 시점
 				BindAction(Action.InputAction, ETriggerEvent::Started, Object, PressedFunc, Action.InputTag);
 			}
 
-			// 2. Release 이벤트 바인딩
-			// Action.AllowedBindings에 BindRelease 플래그가 설정되어 있는지 확인합니다.
 			if (ReleasedFunc && (Action.AllowedBindings & (uint8)FBindings::BindRelease))
 			{
-				// ETriggerEvent::Completed는 입력이 완료되었거나 해제되었을 때 발생합니다.
+				// ETriggerEvent::Completed = 입력이 해제된 시점
 				BindAction(Action.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, Action.InputTag);
 			}
 
-			// 3. Held 이벤트 바인딩
-			// Action.AllowedBindings에 BindHeld 플래그가 설정되어 있는지 확인합니다.
 			if (HeldFunc && (Action.AllowedBindings & (uint8)FBindings::BindHeld))
 			{
-				// ETriggerEvent::Triggered는 입력이 계속 유지되고 있는 동안 주기적으로 발생합니다.
+				// ETriggerEvent::Triggered = 입력이 유지되는 동안 매 프레임
 				BindAction(Action.InputAction, ETriggerEvent::Triggered, Object, HeldFunc, Action.InputTag);
 			}
 		}

@@ -8,16 +8,10 @@
 #include "BossCombatComponent.generated.h"
 
 /**
- * 보스 전투 상태의 단일 소스(Single Source of Truth).
- *
- * - 패턴 정적 데이터 테이블 보관
- * - 현재 패턴 잠금/타임아웃/쿨다운/Recovery 상태 관리 (전부 서버 시각 비교 기반)
- * - 점수 기반 패턴 선택 로직 (점수를 확률로 변환해 추첨)
- *
- * BehaviorTree 노드는 이 컴포넌트를 읽고/변형하며, 분기에 필요한 최소값만 Blackboard로 미러링한다.
- * 이 클래스는 Blackboard/BT를 전혀 알지 못한다. (순수 로직 → 테스트 용이)
- *
- * BT가 서버에서만 도는 것과 동일하게, 모든 상태 변형은 서버 권한에서 호출된다는 전제.
+ * 보스 전투 상태의 단일 소스(Single Source of Truth). BehaviorTree 노드가 이 컴포넌트를
+ * 읽고/변형하며, 분기에 필요한 최소값만 Blackboard로 미러링한다. 이 클래스는 Blackboard/BT를
+ * 전혀 알지 못한다(순수 로직 → 테스트 용이). BT가 서버에서만 도는 것과 동일하게, 모든 상태
+ * 변형은 서버 권한에서 호출된다는 전제.
  */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class MAGICULT_API UBossCombatComponent : public UActorComponent
@@ -31,7 +25,6 @@ public:
 
 	const FBossAttackPatternData* FindPatternData(EBossPattern Pattern) const;
 
-	// 지금 당장 이 패턴을 실행할 수 있는 거리인가.
 	bool IsInExecuteRange(EBossPattern Pattern, float Distance) const;
 
 	// 실행 최소 거리보다 안쪽으로 붙어버린 경우(Dash/JumpSmash가 너무 가까운 상황).
@@ -98,6 +91,5 @@ private:
 	// 방금 포기(timeout/too close)한 패턴. 바로 다음 재선택에서만 제외한다.
 	EBossPattern LastAbandonedPattern = EBossPattern::None;
 
-	// 패턴별 쿨다운 종료 시각.
 	TMap<EBossPattern, float> CooldownEndTimes;
 };

@@ -14,13 +14,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FChargeDirectlyDelegate);
 
 /**
  * GA 안에서 사용하는 직선 돌진 AbilityTask.
- *
- * - 시작 시점에 방향을 한 번만 계산한다.
- * - AIController MoveTo를 사용하지만 Pathfinding은 끈다.
- * - 공중 위치가 NavMesh로 투영되지 않도록 ProjectGoalLocation도 끈다.
- * - Duration이 지나면 OnDurationFinished로 종료된다.
- * - 도착하면 OnCompleted.
- * - PathFollowing에서 막힘을 반환하면 OnBlocked.
+ * 시작 시점 방향만 계산해 유지하고, NavMesh Pathfinding/투영을 꺼서
+ * 공중 목표로도 직선 돌진이 가능하게 한다.
  */
 UCLASS()
 class MAGICULT_API UAbilityTask_ChargeDirectly : public UAbilityTask

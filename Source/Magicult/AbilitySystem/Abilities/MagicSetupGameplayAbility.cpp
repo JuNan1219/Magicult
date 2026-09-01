@@ -8,20 +8,21 @@
 
 UMagicSetupGameplayAbility::UMagicSetupGameplayAbility()
 {
-	// NetExecutionPolicy는 "입력→서버 라우팅"을 위해서만 LocalPredicted로 둔다.
-	// (GameplayEvent 트리거는 로컬에서만 처리되므로, 클라 입력이 서버에 닿으려면 LocalPredicted가 필요하다.)
-	// 실제 SpellTag 적용은 ActivateAbility에서 HasAuthority로 가드되어 서버에서만 수행된다(무예측).
+	// NetExecutionPolicy는 LocalPredicted: 소유 클라에서도 ActivateAbility 본문이 실행되어
+	// SetSpellTag가 서버와 소유 클라 양쪽에서 각각 도니, UI가 네트워크 왕복 없이 즉시 반응한다.
+	// CurrentSpellState는 Replicated라 서버 값으로 최종 동기화된다.
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Debuff_Stunned);
+	ActivationBlockedTags.AddTag(FMagicultGameplayTags::Get().Character_State_Dead);
 }
 
 void UMagicSetupGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	// SpellTag 적용은 서버 권위 컴포넌트(MagicComponent) 직접 호출이므로 서버에서만 수행한다.
-	// (LocalPredicted라 클라 카피에서도 본문이 돌지만, 가드로 클라 중복 적용을 막는다.)
+	// bIsValid는 서버(HasAuthority)와 소유 클라(IsLocallyControlled) 양쪽을 통과시킨다 — 의도된 로컬 예측이다.
+	// 서버 값이 Replicated CurrentSpellState로 최종 동기화되므로 클라 실행은 UI 반응성을 위한 낙관적 갱신일 뿐이다.
 	bool bIsValid = (HasAuthority(&ActivationInfo) || ActorInfo->IsLocallyControlled()) && ActorInfo != nullptr && IsValid(ActorInfo->AvatarActor.Get()) && ActorInfo->AvatarActor.Get()->Implements<UMagicInterface>();
 	if (bIsValid)
 	{

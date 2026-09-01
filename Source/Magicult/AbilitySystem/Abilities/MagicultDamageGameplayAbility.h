@@ -62,7 +62,6 @@ private:
 	/** 모든 종료 경로의 단일 진입점. 재진입 방어 + AttackInstance 정리 + EndAbility 호출 */
 	void TerminateAbility(bool bCancelled);
 
-	/** AttackInstance Cancel → nullptr */
 	void CleanupAttackInstance();
 
 protected:

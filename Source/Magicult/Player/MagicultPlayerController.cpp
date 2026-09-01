@@ -193,7 +193,7 @@ void AMagicultPlayerController::Rotation(const FInputActionValue& InputActionVal
 
 	FRotator ControlRot = GetControlRotation();
 
-	// 1초에 45도 회전
+	// RotationSpeed는 초당 회전 각도(도)다.
 	const float DeltaYaw = AxisValue * RotationSpeed * GetWorld()->GetDeltaSeconds();
 	ControlRot.Yaw = FRotator::NormalizeAxis(ControlRot.Yaw + DeltaYaw);
 
