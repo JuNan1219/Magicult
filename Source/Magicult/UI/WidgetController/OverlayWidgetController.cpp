@@ -8,6 +8,7 @@
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/Component/MagicComponent.h"
 #include "Magicult/Interface/MagicInterface.h"
+#include "Magicult/UI/ViewModel/HotKeyBarViewModel.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
@@ -17,6 +18,11 @@ void UOverlayWidgetController::BroadcastInitialValues()
 	OnMaxHealthChanged.Broadcast(MagicultAttributeSet->GetMaxHealth());
 	OnMaxManaChanged.Broadcast(MagicultAttributeSet->GetMana());
 	OnMaxManaChanged.Broadcast(MagicultAttributeSet->GetMaxMana());
+
+	if (HotKeyBarViewModel)
+	{
+		HotKeyBarViewModel->BroadcastCurrent();
+	}
 }
 
 void UOverlayWidgetController::BindCallbacksToDependencies()
@@ -54,6 +60,10 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 
 	if (!MagicInfo) return;
 
+	// ViewModel은 아래 람다들이 참조하므로 구독을 걸기 전에 만들어 둔다.
+	HotKeyBarViewModel = NewObject<UHotKeyBarViewModel>(this);
+	HotKeyBarViewModel->Initialize(MagicInfo, GetMagicultASC());
+
 	FMagicultGameplayTags GameplayTags =  FMagicultGameplayTags::Get();
 	AbilitySystemComponent->RegisterGameplayTagEvent(GameplayTags.Character_State_MagicMode).AddLambda([this](const FGameplayTag Tag, int32 NewCount)
 		{
@@ -67,6 +77,8 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 				}
 				OnTagChanged.Broadcast(Tag, *MagicInfoArray, NewCount);
 			}
+
+			HotKeyBarViewModel->HandleMagicModeChanged(NewCount > 0);
 		});
 	AbilitySystemComponent->RegisterGenericGameplayTagEvent().AddLambda(
 		[this](const FGameplayTag Tag, int32 NewCount)
@@ -75,16 +87,22 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 			// 5가지 모드 태그 전부 여기서 처리
 			if (Tag.MatchesTag(GameplayTags.Character_Mode) && Tag != GameplayTags.Character_Mode)
 			{
+				// ModeToMagics에 없는 Character.Mode.* 태그가 붙어도 죽지 않도록 널 가드를 둔다.
 				FMagicInfoArray* MagicInfoArray = MagicInfo->ModeToMagics.Find(Tag);
-				for (auto& MagicInfo : MagicInfoArray->Magics)
+				if (MagicInfoArray)
 				{
-					FGameplayTag GameplayTag = GetMagicultASC()->GetStatusFromAbilityTag(MagicInfo.AbilityTag);
-					if (GameplayTag.IsValid())
-						MagicInfo.StatusTag = GameplayTags.Magic_Status_Unlocked;
-					else
-						MagicInfo.StatusTag = GameplayTags.Magic_Status_Locked;
+					for (auto& MagicInfo : MagicInfoArray->Magics)
+					{
+						FGameplayTag GameplayTag = GetMagicultASC()->GetStatusFromAbilityTag(MagicInfo.AbilityTag);
+						if (GameplayTag.IsValid())
+							MagicInfo.StatusTag = GameplayTags.Magic_Status_Unlocked;
+						else
+							MagicInfo.StatusTag = GameplayTags.Magic_Status_Locked;
+					}
+					OnTagChanged.Broadcast(Tag, *MagicInfoArray, NewCount);
 				}
-				OnTagChanged.Broadcast(Tag, *MagicInfoArray, NewCount);
+
+				HotKeyBarViewModel->HandleModeTagChanged(Tag, NewCount);
 			}
 		}
 	);
@@ -122,23 +140,12 @@ void UOverlayWidgetController::BindToMagicComponent(APawn* OwnerPawn)
 		[this](FSpellState NewSpellState, FGameplayTag ChangedTag)
 		{
 			OnSpellStateChanged.Broadcast(NewSpellState, ChangedTag);
+
+			if (HotKeyBarViewModel)
+			{
+				HotKeyBarViewModel->HandleSpellTagCommitted(NewSpellState, ChangedTag);
+			}
 		}
 	);
 }
 
-void UOverlayWidgetController::SetModeInputBlocked(bool bBlocked)
-{
-	if (!AbilitySystemComponent) return;
-
-	// 로컬 전용(비복제) 태그: 이 클라이언트의 모드 선택 어빌리티 발동만 막는 UX 게이트라서
-	// 서버에 알릴 필요가 없다. 서버 권한 GE로 적용되는 모드 태그 흐름과는 무관하다.
-	const FGameplayTag BlockTag = FMagicultGameplayTags::Get().Character_State_ModeInputBlocked;
-	if (bBlocked)
-	{
-		AbilitySystemComponent->AddLooseGameplayTag(BlockTag);
-	}
-	else
-	{
-		AbilitySystemComponent->RemoveLooseGameplayTag(BlockTag);
-	}
-}

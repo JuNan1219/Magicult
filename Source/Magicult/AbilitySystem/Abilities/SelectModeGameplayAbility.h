@@ -27,8 +27,10 @@ protected:
 
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	// 이 인스턴스가 자기 ASC에 붙여둔 모드 태그. 유효하면 "내가 붙였다"는 뜻이고,
+	// EndAbility에서 반드시 같은 태그를 빼야 한다(loose 태그는 참조 카운트다).
 	UPROPERTY(BlueprintReadOnly)
-	FActiveGameplayEffectHandle AppliedEffectHandle;
+	FGameplayTag AppliedModeTag;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DataAsset")
 	TObjectPtr<UInputToTagConfig> InputToTag;

@@ -183,6 +183,13 @@ void AMagicultCharacterBase::Die()
 		DebuffTags.AddTag(GameplayTags.Debuff_Stunned);
 		DebuffTags.AddTag(GameplayTags.Debuff_Ragdoll);
 		AbilitySystemComponent->RemoveActiveEffectsWithGrantedTags(DebuffTags);
+
+		// 마법 모드도 사망 시 취소한다. DA_InterruptPolicy(피격 인터럽트)와 동일한 대상 태그를 써서
+		// 같은 캐스케이드(GA_MagicMode::EndAbility -> CancelAbilitiesWithTag(Character.Mode))를 태운다 —
+		// ASC는 PlayerState 소유라 리스폰 이후에도 살아남으므로, 여기서 안 끊으면 마법 모드/모드
+		// 선택 상태가 리스폰 뒤까지 새어나간다.
+		FGameplayTagContainer MagicModeTag(GameplayTags.Character_State_MagicMode);
+		AbilitySystemComponent->CancelAbilities(&MagicModeTag);
 	}
 
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));

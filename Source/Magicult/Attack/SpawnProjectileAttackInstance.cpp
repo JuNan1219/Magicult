@@ -16,7 +16,7 @@
 void USpawnProjectileAttackInstance::HandleEventTag_Implementation(FGameplayTag EventTag)
 {
     Super::HandleEventTag_Implementation(EventTag);
-    
+
     if (EventTag.IsValid() && EventTag.MatchesTagExact(FMagicultGameplayTags::Get().Notify_Attack_Spawn))
     {
         AActor* SourceActor = Context.SourceActor.Get();

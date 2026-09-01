@@ -59,6 +59,14 @@ struct FMagicultSimpleMagicInfo
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FText ToolTip = FText();
+
+	/**
+	 * 모드 목록(Character.State.MagicMode) 페이지 전용 표시값 — 이 모드 카테고리에
+	 * 이미 값이 설정돼 있는지. 상세 페이지 엔트리에서는 항상 false로 둔다(의미 없음).
+	 * 에디터에서 편집할 값이 아니라 런타임에 계산되므로 EditDefaultsOnly를 안 붙인다.
+	 */
+	UPROPERTY(BlueprintReadOnly)
+	bool bConfigured = false;
 };
 
 USTRUCT(BlueprintType)
