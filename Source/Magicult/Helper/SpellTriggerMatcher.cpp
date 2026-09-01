@@ -89,12 +89,12 @@ uint8 FSpellTriggerMatcher::GetRequiredFlagsForActionType(ESpellActionType Actio
 	case ESpellActionType::ConsumePierce:      return HasDamageCauser;
 	case ESpellActionType::ApplyDamage:        return HasTargetASC;
 	case ESpellActionType::ApplyElement:       return HasTargetASC;
-	case ESpellActionType::ApplyDebuff:        return HasTargetASC | HasSourceASC;
+	case ESpellActionType::ApplyDebuff:        return None;
 	case ESpellActionType::SpawnActor:         return None;
 	case ESpellActionType::ApplyGameplayEffect:return HasTargetASC | HasSourceASC;
 	case ESpellActionType::EmitNiagara:        return None;
 	case ESpellActionType::PlayCue:            return None;
-	case ESpellActionType::Knockback:          return HasTargetActor;
+	case ESpellActionType::Knockback:          return None;
 	case ESpellActionType::DestroyActor:       return HasDamageCauser;
 	case ESpellActionType::Interrupt:          return HasTargetASC;
 	case ESpellActionType::None:               return None;

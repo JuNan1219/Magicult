@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Magicult/AbilitySystem/MagicultAttributeSet.h"
 #include "GameplayEffectTypes.h"
+#include "Animation/AnimInstance.h"
 
 AMagicultCharacterBase::AMagicultCharacterBase()
 {
@@ -57,6 +58,27 @@ void AMagicultCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	CacheReviveDefaults();
+}
+
+void AMagicultCharacterBase::CacheReviveDefaults()
+{
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		DefaultMeshRelativeTransform = MeshComp->GetRelativeTransform();
+	}
+	if (IsValid(Weapon))
+	{
+		DefaultWeaponRelativeTransform = Weapon->GetRelativeTransform();
+		DefaultWeaponAttachSocket = Weapon->GetAttachSocketName();
+		DefaultWeaponMaterial = Weapon->GetMaterial(0);
+	}
+	// SpringArm은 플레이어 BP에만 있는 컴포넌트다(몬스터에선 null → no-op).
+	if (USpringArmComponent* SpringArm = FindComponentByClass<USpringArmComponent>())
+	{
+		DefaultSpringArmParent = SpringArm->GetAttachParent();
+		DefaultSpringArmRelativeTransform = SpringArm->GetRelativeTransform();
+	}
 }
 
 void AMagicultCharacterBase::InitializeDefaultAttributes() const
@@ -172,6 +194,8 @@ bool AMagicultCharacterBase::AttachActorToSocket_Implementation(const FGameplayT
 void AMagicultCharacterBase::Die()
 {
 	if (!HasAuthority()) return;
+	// 같은 프레임에 치명 데미지가 여러 번 들어와도 사망 처리는 1회만 한다(부활 타이머 중복 방지).
+	if (bDead) return;
 
 	// 사망 시 모든 디버프 이펙트 제거 (태그 복제 → 클라이언트 비주얼 자동 정리)
 	if (AbilitySystemComponent)
@@ -186,6 +210,11 @@ void AMagicultCharacterBase::Die()
 	}
 
 	Weapon->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
+
+	// 부활은 죽은 자리에서 이뤄진다. 래그돌 메시가 아니라 캡슐 위치를 기준으로 잡는다.
+	DeathLocation = GetActorLocation();
+	DeathRotation = GetActorRotation();
+
 	MulticastHandleDeath();
 }
 
@@ -219,8 +248,101 @@ void AMagicultCharacterBase::MulticastHandleDeath_Implementation()
 		SpringArm->DetachFromComponent(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 	}
 
+	// 죽은 뒤에도 (보이지 않는) 캡슐이 입력으로 밀려다니지 않도록 이동을 정지한다.
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->StopMovementImmediately();
+		MoveComp->DisableMovement();
+	}
+
 	Dissolve();
 	bDead = true;
+}
+
+void AMagicultCharacterBase::Revive()
+{
+	if (!HasAuthority()) return;
+	if (!bDead) return;
+
+	// 사망 후 캡슐이 밀렸을 수 있으므로 사망 시점 위치로 되돌린다.
+	SetActorLocationAndRotation(DeathLocation, DeathRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	// bDead 해제가 먼저다. 그래야 이어지는 바이탈 리셋이 AttributeSet의 사망 게이트에 막히지 않는다.
+	MulticastHandleRevive();
+
+	ResetVitalAttributes();
+}
+
+void AMagicultCharacterBase::MulticastHandleRevive_Implementation()
+{
+	// MulticastHandleDeath가 바꾼 것들을 역순으로 되돌린다.
+	// 물리 시뮬 중인 컴포넌트는 어태치가 무시되므로 SimulatePhysics(false)를 먼저 끈다.
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetSimulatePhysics(false);
+		MeshComp->SetEnableGravity(false);
+
+		MeshComp->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		MeshComp->SetRelativeTransform(DefaultMeshRelativeTransform);
+
+		// 생성자 기본값 복구(사망 시 PhysicsOnly + WorldStatic Block으로 바뀌어 있다).
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		MeshComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
+
+		// 히트리액트 등 사망 직전 몽타주 잔재 정리
+		if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+		{
+			AnimInstance->StopAllMontages(0.1f);
+		}
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	if (IsValid(Weapon))
+	{
+		Weapon->SetSimulatePhysics(false);
+		Weapon->SetEnableGravity(false);
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, DefaultWeaponAttachSocket);
+		Weapon->SetRelativeTransform(DefaultWeaponRelativeTransform);
+		Weapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	// 사망 시 분리했던 카메라를 다시 캐릭터에 붙인다(플레이어 전용, 몬스터는 no-op).
+	if (USpringArmComponent* SpringArm = FindComponentByClass<USpringArmComponent>())
+	{
+		USceneComponent* AttachParent = IsValid(DefaultSpringArmParent) ? DefaultSpringArmParent.Get() : GetRootComponent();
+		SpringArm->AttachToComponent(AttachParent, FAttachmentTransformRules::KeepRelativeTransform);
+		SpringArm->SetRelativeTransform(DefaultSpringArmRelativeTransform);
+	}
+
+	RestoreDefaultMaterials();
+
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(MOVE_Walking);
+	}
+
+	bDead = false;
+}
+
+void AMagicultCharacterBase::RestoreDefaultMaterials()
+{
+	// Dissolve()가 MID로 교체한 머티리얼을 원본으로 되돌린다(디졸브 미설정이면 애초에 교체가 없어 그대로 덮어써도 무해).
+	if (IsValid(Weapon) && DefaultWeaponMaterial)
+	{
+		Weapon->SetMaterial(0, DefaultWeaponMaterial);
+	}
+}
+
+void AMagicultCharacterBase::ResetVitalAttributes()
+{
+	if (!HasAuthority()) return;
+
+	UMagicultAttributeSet* MagicultAS = Cast<UMagicultAttributeSet>(AttributeSet);
+	if (!MagicultAS) return;
+
+	MagicultAS->SetHealth(MagicultAS->GetMaxHealth());
+	MagicultAS->SetMana(MagicultAS->GetMaxMana());
 }
 
 void AMagicultCharacterBase::MulticastApplyRagdollImpulse_Implementation(FVector Impulse, FName BoneName)

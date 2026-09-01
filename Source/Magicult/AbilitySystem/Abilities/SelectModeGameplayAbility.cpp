@@ -47,7 +47,7 @@ void USelectModeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandl
                 ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(AppliedEffectHandle);
                 AppliedEffectHandle.Invalidate();
             }
-
+			
             const FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
             const FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(InputToSelect.EffectClass, 1, ContextHandle);
             AppliedEffectHandle = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);

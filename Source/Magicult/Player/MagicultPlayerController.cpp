@@ -10,6 +10,7 @@
 #include "Magicult/AbilitySystem/MagicultAbilitySystemComponent.h"
 #include "Magicult/UI/HUD/MagicultHUD.h"
 #include "Magicult/MagicultGameplayTags.h"
+#include "Magicult/Interface/CombatInterface.h"
 
 
 AMagicultPlayerController::AMagicultPlayerController()
@@ -27,7 +28,7 @@ void AMagicultPlayerController::PlayerTick(float DeltaTime)
 
 void AMagicultPlayerController::CursorDirection()
 {
-	if (IsStunned()) return;
+	if (IsStunned() || IsPawnDead()) return;
 	if (!CursorHit.bBlockingHit) return;
 
 	APawn* ControlledPawn = GetPawn<APawn>();
@@ -90,11 +91,13 @@ void AMagicultPlayerController::CursorTrace()
 void AMagicultPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
 	if (GetASC() == nullptr) return;
+	if (IsPawnDead()) return;
 	GetASC()->AbilityInputTagPressed(InputTag);
 }
 
 void AMagicultPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+	// Released는 사망 중에도 통과시킨다. 눌림 해제까지 막으면 ASC에 눌린 상태가 남는다.
 	if (GetASC() == nullptr) return;
 	GetASC()->AbilityInputTagReleased(InputTag);
 }
@@ -102,6 +105,7 @@ void AMagicultPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 void AMagicultPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
 	if (GetASC() == nullptr) return;
+	if (IsPawnDead()) return;
 	GetASC()->AbilityInputTagHeld(InputTag);
 }
 
@@ -118,6 +122,13 @@ bool AMagicultPlayerController::IsStunned()
 {
 	UMagicultAbilitySystemComponent* ASC = GetASC();
 	return ASC && ASC->HasMatchingGameplayTag(FMagicultGameplayTags::Get().Debuff_Stunned);
+}
+
+bool AMagicultPlayerController::IsPawnDead()
+{
+	// bDead는 MulticastHandleDeath/Revive로 소유 클라이언트에도 내려와 있으므로 로컬 판정으로 충분하다.
+	APawn* ControlledPawn = GetPawn<APawn>();
+	return ControlledPawn && ControlledPawn->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(ControlledPawn);
 }
 
 
@@ -155,7 +166,7 @@ void AMagicultPlayerController::SetupInputComponent()
 
 void AMagicultPlayerController::Move(const FInputActionValue& InputActionValue)
 {
-	if (IsStunned()) return;
+	if (IsStunned() || IsPawnDead()) return;
 
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 

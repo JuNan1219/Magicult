@@ -646,16 +646,13 @@ AOverlapActor* UMagicultAbilitySystemLibrary::SpawnOverlapActor(UObject* WorldCo
 		return nullptr;
 	}
 
-	FActorSpawnParameters Params;
-	Params.Owner = SpawnParam.Owner;
-	Params.Instigator = SpawnParam.Instigator;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
 	AOverlapActor* Actor =
-		World->SpawnActor<AOverlapActor>(
+		World->SpawnActorDeferred<AOverlapActor>(
 			SpawnParam.OverlapActorClass,
 			SpawnParam.SpawnTransform,
-			Params
+			SpawnParam.Owner,
+			SpawnParam.Instigator,
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn
 		);
 
 	if (!Actor)
@@ -664,6 +661,11 @@ AOverlapActor* UMagicultAbilitySystemLibrary::SpawnOverlapActor(UObject* WorldCo
 	}
 
 	Actor->InitializeWithConfig(SpawnParam.Context, SpawnParam.CollisionConfig, SpawnParam.ParentTriggerActionBindings, SpawnParam.AttackSpec, SpawnParam.bOverrideAttackSpec);
+
+	UGameplayStatics::FinishSpawningActor(
+		Actor,
+		SpawnParam.SpawnTransform
+	);
 
 	return Actor;
 }
