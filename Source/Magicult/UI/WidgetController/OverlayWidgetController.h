@@ -15,6 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpellStateChangedSignature, FSpe
 
 struct FOnAttributeChangeData;
 class UMagicComponent;
+class UHotKeyBarViewModel;
 
 /**
  * 
@@ -46,10 +47,11 @@ public:
 	UPROPERTY(BlueprintAssignable, category = "GAS")
 	FOnSpellStateChangedSignature OnSpellStateChanged;
 
-	// 모드 전환 UI(아이콘) 애니메이션 재생 중에는 View가 이 함수로 입력 차단을 알린다.
-	// View는 ASC/태그를 직접 건드리지 않고 항상 Controller를 거친다.
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void SetModeInputBlocked(bool bBlocked);
+	// 마법 모드 핫키바 전용 ViewModel. 흩어진 GAS 신호를 단일 파생 상태로 통합한다.
+	// View(WBP_HotKey)는 ASC/태그를 직접 보지 않고 이 객체의 OnStateChanged만 구독한다.
+	UPROPERTY(BlueprintReadOnly, Category = "HotKeyBar")
+	TObjectPtr<UHotKeyBarViewModel> HotKeyBarViewModel;
+
 protected:
 
 private:
