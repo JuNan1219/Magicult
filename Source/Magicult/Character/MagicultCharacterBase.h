@@ -16,6 +16,7 @@ class UGameplayEffect;
 class UGameplayAbility;
 class UMagicComponent;
 class USkeletalMeshComponent;
+class UMaterialInterface;
 class UMaterialInstance;
 class UMaterialInstanceDynamic;
 class USkeletalMeshSocket;
@@ -46,6 +47,14 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath();
+
+	// 사망 상태를 되돌린다(서버 권한). Die()의 대칭.
+	// 죽은 자리로 되돌린 뒤 MulticastHandleRevive()로 각 머신의 비주얼/콜리전을 복구하고 바이탈을 리셋한다.
+	virtual void Revive();
+
+	// MulticastHandleDeath가 바꾼 상태를 모든 머신에서 원복한다.
+	UFUNCTION(NetMulticast, Reliable)
+	virtual void MulticastHandleRevive();
 
 	// 사망(래그돌) 상태 넉백 impulse를 모든 머신에서 적용한다.
 	// 래그돌 시뮬은 각 머신이 로컬로 돌리므로 impulse도 멀티캐스트해야 서버/클라 시체가 일관되게 날아간다.
@@ -122,6 +131,34 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bDead = false;
+
+	/*
+	* Revive (부활 시 원복용 기본값)
+	*/
+
+	// MulticastHandleDeath가 바꾸는 값들의 원본. BeginPlay에서 1회 캐시한다.
+	void CacheReviveDefaults();
+
+	// 디졸브로 교체된 머티리얼을 되돌린다. 자식이 자기 메시 머티리얼 복구를 덧붙인다.
+	virtual void RestoreDefaultMaterials();
+
+	// 서버에서 체력/마나를 최대치로 되돌린다. bDead 해제 이후에 호출해야 사망 게이트에 막히지 않는다.
+	virtual void ResetVitalAttributes();
+
+	FTransform DefaultMeshRelativeTransform;
+	FTransform DefaultWeaponRelativeTransform;
+	FName DefaultWeaponAttachSocket;
+	FTransform DefaultSpringArmRelativeTransform;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> DefaultWeaponMaterial;
+
+	UPROPERTY()
+	TObjectPtr<USceneComponent> DefaultSpringArmParent;
+
+	// 사망 시점 트랜스폼. 사망 후에도 캡슐은 밀릴 수 있으므로 부활은 이 값 기준으로 한다.
+	FVector DeathLocation = FVector::ZeroVector;
+	FRotator DeathRotation = FRotator::ZeroRotator;
 
 	/*
 	* Health Regen (전투 이탈 시 체력 회복)

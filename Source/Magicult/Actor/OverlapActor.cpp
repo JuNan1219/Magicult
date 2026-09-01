@@ -38,11 +38,6 @@ void AOverlapActor::InitializeWithConfig_Implementation(const FSpellContext& InC
 {
 	SpellContext = InContext;
 	SpellContext.DamageCauser = this;
-	if (!ensure(Config))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Config 설정이 없습니다 Owner : %s, this : %s"), *GetOwner()->GetName(), *GetName());
-	}
-	CollisionGuard->bCanHitSameTargetAgain = Config->bCanHitSameTargetAgain;
 
 	if (bOverrideAttackSpec)
 	{
@@ -50,6 +45,28 @@ void AOverlapActor::InitializeWithConfig_Implementation(const FSpellContext& InC
 	}
 
 	TriggerActionBindings.Append(ParentTriggerActionBindings);
+
+	SetOverlapConfig(Config);
+}
+
+void AOverlapActor::SetOverlapConfig(const UOverlapDamageConfig* InConfig)
+{
+	OverlapConfig = InConfig;
+
+	if (HasActorBegunPlay())
+	{
+		ApplyOverlapConfig();
+	}
+}
+
+void AOverlapActor::ApplyOverlapConfig_Implementation()
+{
+	if (!OverlapConfig)
+	{
+		return;
+	}
+
+	CollisionGuard->bCanHitSameTargetAgain = OverlapConfig->bCanHitSameTargetAgain;
 }
 
 void AOverlapActor::Expire()
@@ -65,10 +82,10 @@ void AOverlapActor::Expire()
 }
 void AOverlapActor::OnExpired()
 {
-	// 파괴는 여기서 직접 실행하지 않는다. Trigger_Projectile_Expire에 바인딩된
+	// 파괴는 여기서 직접 실행하지 않는다. Trigger_OverlapActor_Expire에 바인딩된
 	// DestroyActor 액션이 RegisterPendingCleanupObject를 호출해 처리한다 —
 	// 그래야 파괴가 이 트리거의 액션 배치 안에서 이뤄져 원자성이 깨지지 않는다.
-	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_Projectile_Expire, FGameplayTagContainer(), SpellContext);
+	UMagicultAbilitySystemLibrary::EnqueueTriggerEvent(this, FMagicultGameplayTags::Get().Trigger_OverlapActor_Expire, FGameplayTagContainer(), SpellContext);
 }
 
 void AOverlapActor::LifeSpanExpired()
@@ -149,7 +166,7 @@ void AOverlapActor::BeginPlay()
 	CollisionGuard->SetCollisionComponent(GetCollider());
 	CollisionGuard->OnGuardedCollision.AddDynamic(this, &AOverlapActor::HandleGuardedCollision);
 
-
+	ApplyOverlapConfig();
 }
 
 UPrimitiveComponent* AOverlapActor::GetCollider_Implementation()

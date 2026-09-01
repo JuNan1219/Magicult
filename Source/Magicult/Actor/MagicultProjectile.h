@@ -53,6 +53,9 @@ struct FProjectileClientInitData
 	float LifeSpanMultiplier = 1.0f;
 
 	UPROPERTY()
+	float RehitCooldown = 0.5f;
+
+	UPROPERTY()
 	bool bTracking = false;
 
 	UPROPERTY()
