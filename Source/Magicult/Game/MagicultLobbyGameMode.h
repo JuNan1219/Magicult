@@ -30,7 +30,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lobby")
 	int32 MinPlayersToStart = 1;
 
-	// 로비에서 스폰할 캐릭터 클래스 (BP에서 설정)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lobby|Character")
 	TSubclassOf<ALobbyCharacter> LobbyCharacterClass;
 

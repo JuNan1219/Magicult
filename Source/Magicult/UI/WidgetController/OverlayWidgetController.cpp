@@ -107,11 +107,10 @@ void UOverlayWidgetController::BindCallbacksToDependencies()
 		}
 	);
 
-	// 마법 설정의 마지막 단계는 Tag/GE가 아니라 MagicComponent를 직접 호출하는 구조라
-	// ASC 태그 이벤트로는 못 잡는다. 소유 Pawn의 MagicComponent 델리게이트를 직접 구독해 중계한다.
-	// 서버는 이 시점에 Pawn이 이미 유효하지만, 클라이언트는 PlayerState 복제와 Controller-Pawn 링크
-	// 복제가 독립적이라 아직 없을 수 있다. 그래서 "지금 즉시" + "나중에(OnPossessedPawnChanged)" 둘 다
-	// 시도하고, 실제 바인딩은 BindToMagicComponent의 가드가 컴포넌트당 한 번만 일어나도록 보장한다.
+	// 마법 설정의 마지막 단계는 MagicComponent 델리게이트를 직접 구독해야 하는 구조라(ASC 태그로는 못 잡음),
+	// 클라이언트는 PlayerState/Controller-Pawn 링크 복제가 독립적이라 이 시점에 Pawn이 아직 없을 수 있다.
+	// 그래서 "지금 즉시" + "나중에(OnPossessedPawnChanged)" 둘 다 시도하고, BindToMagicComponent의
+	// 가드로 컴포넌트당 한 번만 등록되게 한다.
 	if (PlayerController)
 	{
 		PlayerController->OnPossessedPawnChanged.AddDynamic(this, &UOverlayWidgetController::HandlePossessedPawnChanged);

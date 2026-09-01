@@ -27,7 +27,6 @@ protected:
 	virtual void OnExecuteStarted_Implementation() override;
 	virtual void OnFinishedInternal_Implementation() override;
 
-	/** Execute 시 콜라이더 생성 */
 	void CreateOverlapCollider();
 
 private:

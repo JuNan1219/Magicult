@@ -26,12 +26,10 @@ static TAutoConsoleVariable<int32> CVarMaxActionsPerFrame(
     TEXT("한 프레임에 처리할 최대 Action 수(트리거 단위 휴리스틱, 오버슈트 가능)"),
     ECVF_Default);
 
-// TriggerQueue 처리 비용 관측용 계측. Test/Shipping 빌드에서는 엔진이 자동으로 컴파일 아웃한다.
-//
-// 두 경로로 내보낸다:
-//  1) `stat Magicult` 오버레이 + Insights Timing(stats 채널) : DECLARE_*_STAT / SCOPE_CYCLE_COUNTER
-//  2) Insights Counters 트랙 (counters 채널)                : TRACE_DECLARE_INT_COUNTER / TRACE_COUNTER_SET
-//     (레거시 STAT 카운터는 Counters 트랙으로 흐르지 않으므로 별도로 필요하다)
+// TriggerQueue 처리 비용 관측용 계측(Test/Shipping은 자동 컴파일 아웃). 두 경로로 내보낸다:
+// 1) `stat Magicult`/Insights Timing(stats 채널) - DECLARE_*_STAT/SCOPE_CYCLE_COUNTER
+// 2) Insights Counters 트랙(counters 채널) - TRACE_DECLARE_INT_COUNTER/TRACE_COUNTER_SET
+//    (레거시 STAT 카운터는 Counters 트랙으로 안 흐르므로 별도 필요)
 DECLARE_STATS_GROUP(TEXT("Magicult"), STATGROUP_Magicult, STATCAT_Advanced);
 
 DECLARE_CYCLE_STAT(TEXT("ProcessTriggerQueue (drain)"), STAT_Magicult_ProcessTriggerQueue, STATGROUP_Magicult);
@@ -154,11 +152,9 @@ void UCombatSubsystem::ProcessTriggerQueue()
     int32 GeneratedThisFrame = 0;
     int32 MaxDepthThisFrame = 0;
 
-    // 프레임 예산: 트리거 단위로 체크한다 - 한 트리거에 묶인 Action들은 항상 같은 프레임에서
-    // 통째로 처리되므로(원자성 보장, 폭발 이펙트/데미지 불일치 방지), 트리거 하나의 액션 수만큼
-    // 예산을 넘길 수 있다. 하드 데드라인이 아니라 스파이크 완화용 휴리스틱.
-    // 예산 초과로 못 처리한 트리거는 큐에 남아 다음 Tick의 ProcessTriggerQueue가 이어서 처리한다
-    // (causer는 DamageCauserPin이 프레임을 넘겨서도 살려준다).
+    // 프레임 예산: 트리거 단위로 체크한다(CVarMaxActionsPerFrame 참고). 예산 초과로 못 처리한
+    // 트리거는 큐에 남아 다음 Tick에 이어서 처리되며, causer는 DamageCauserPin이 프레임을
+    // 넘겨서도 살려준다.
     const int32 ActionBudget = CVarMaxActionsPerFrame.GetValueOnGameThread();
     int32 ActionsProcessedThisFrame = 0;
 

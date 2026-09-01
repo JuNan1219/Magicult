@@ -75,7 +75,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AttackInstance")
 	void SetAttackOrigin(const FVector& InOrigin);
 
-	// IAttackContextProvider::GetAttackOrigin — 주입된 origin 반환.
 	virtual FVector GetAttackOrigin() const override;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite ,Category = "AttackInstance")

@@ -54,7 +54,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DrawDebug(bool bEnabled);
 
-	/** 오버랩 활성/비활성 */
 	UFUNCTION(BlueprintCallable)
 	void EnableOverlap();
 	UFUNCTION(BlueprintCallable)

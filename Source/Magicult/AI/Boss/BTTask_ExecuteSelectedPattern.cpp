@@ -73,7 +73,6 @@ EBTNodeResult::Type UBTTask_ExecuteSelectedPattern::ExecuteTask(UBehaviorTreeCom
 		return EBTNodeResult::InProgress;
 	}
 
-	// 이 태그로 트리거된 GA가 없음.
 	CleanupDelegate();
 	return EBTNodeResult::Failed;
 }

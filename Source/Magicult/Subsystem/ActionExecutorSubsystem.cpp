@@ -120,14 +120,10 @@ bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpe
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
 {
-	// 액션 권한 분리:
-	//   코스메틱(Niagara·Cue) - 서버/클라 모두 실행하되, 전용 서버는 렌더러가 없으므로 스킵
-	//   권위(Damage·GE·Knockback 등) - 서버 전용. 클라이언트는 게임 상태 변경 불가
-	//   SpawnAttackInstance - 그 자체로는 게임 상태를 바꾸지 않는 Trigger 발생기일 뿐이므로
-	//     모든 머신에서 항상 실행한다. 여기서 만들어지는 후속 Trigger(예: ApplyDamage)는
-	//     각자 실행될 때 이 필터를 다시 통과하므로 권위는 그쪽에서 별도로 걸러진다.
-	// TriggerQueue 자체는 서버·클라이언트 양쪽에서 처리되며,
-	// 각 머신은 자신에게 허용된 액션 타입만 실행한다.
+	// 액션 권한 분리: 코스메틱(Niagara·Cue)은 서버/클라 모두 실행하되 전용 서버에선 렌더러가
+	// 없으므로 스킵하고, 권위(Damage·GE·Knockback 등)는 서버 전용이다. SpawnAttackInstance는
+	// 게임 상태를 바꾸지 않는 Trigger 발생기라 모든 머신에서 항상 실행하며, 여기서 생성되는
+	// 후속 Trigger(예: ApplyDamage)가 실행될 때 이 필터를 다시 통과해 권위를 따로 거른다.
 	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
 	                      || Action.ActionType == ESpellActionType::PlayCue;
 
@@ -774,8 +770,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteKnockback(const FSp
 
 	if (Character && MoveComp && !bDead)
 	{
-		// GA로 보낸다.
-		// ServerInitiated → 서버·클라 양쪽이 LaunchCharacter(Force) → 표준 이동 예측 경로로 감속.
+		// GameplayEvent로 KnockbackGameplayAbility(ServerOnly)를 트리거한다.
+		// LaunchCharacter는 서버에서만 실행되고 이동 리플리케이션으로 클라에 반영된다.
 		if (UAbilitySystemComponent* TargetASC =
 			UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor))
 		{

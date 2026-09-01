@@ -80,7 +80,7 @@ bool FMagicultGameplayEffectContext::NetSerialize(FArchive& Ar, class UPackageMa
 
 	if (Ar.IsLoading())
 	{
-		AddInstigator(Instigator.Get(), EffectCauser.Get()); // Just to initialize InstigatorAbilitySystemComponent
+		AddInstigator(Instigator.Get(), EffectCauser.Get()); // InstigatorAbilitySystemComponent 초기화 목적
 	}
 
 	AttackContext.NetSerialize(Ar, Map, bOutSuccess);

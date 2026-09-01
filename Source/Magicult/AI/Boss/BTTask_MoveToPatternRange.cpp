@@ -30,8 +30,7 @@ void UBTTask_MoveToPatternRange::TickTask(UBehaviorTreeComponent& OwnerComp, uin
 void UBTTask_MoveToPatternRange::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult)
 {
 	// Succeeded/Failed/Aborted 어떤 경로로 끝나든 이동은 항상 멈춘다.
-	// (기존엔 TickTask의 정상 종료 경로에서만 StopMovement를 불러서, 외부 Abort — 예: HitReacting
-	// 데코레이터에 의한 중단 — 시 이동이 계속되는 채로 방치됐다)
+	// (HitReact 데코레이터 등 외부 Abort 시에도 이동이 계속되지 않도록 보장)
 	if (AAIController* AICon = OwnerComp.GetAIOwner())
 	{
 		AICon->StopMovement();

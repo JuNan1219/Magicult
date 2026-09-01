@@ -12,11 +12,8 @@ class UMagicInfo;
 class UMagicultAbilitySystemComponent;
 
 /**
- * 마법 모드 핫키바가 그려야 할 파생 상태.
- *
- * "지금 무엇을 보여야 하는가"(bVisible / PageTag / Entries)와
- * "이번에 무엇이 확정됐는가"(CommittedEntry / CommittedSlot)를 한 구조체에 담는다.
- * 후자는 고스트 연출 대상이며, 확정된 항목이 없으면 CommittedSlot == INDEX_NONE 이다.
+ * 핫키바가 그릴 파생 상태. "지금 보여야 할 것"(bVisible/PageTag/Entries)과
+ * "방금 확정된 것"(CommittedEntry/CommittedSlot, 고스트 연출용. 없으면 INDEX_NONE)을 함께 담는다.
  */
 USTRUCT(BlueprintType)
 struct FHotKeyBarViewState
@@ -50,13 +47,9 @@ struct FHotKeyBarViewState
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHotKeyBarStateChangedSignature, const FHotKeyBarViewState&, NewState);
 
 /**
- * 마법 모드 핫키바 전용 ViewModel.
- *
- * GAS에서 흩어져 오는 신호(MagicMode 태그 / Character.Mode.* 태그 / SpellState 확정)를
+ * 마법 모드 핫키바 ViewModel. GAS에서 흩어져 오는 신호(MagicMode/Character.Mode.SpellState 확정)를
  * 하나의 파생 상태로 통합해 View에 단일 델리게이트로 전달한다.
- * View(WBP_HotKey)는 ASC나 태그를 직접 조회하지 않고 이 클래스만 본다.
- *
- * 신호를 실제로 구독하는 쪽은 UOverlayWidgetController이고, 이 클래스는 그 어댑터 호출만 받는다.
+ * 신호 구독은 UOverlayWidgetController가 하고, 이 클래스는 그 어댑터 호출만 받는다.
  */
 UCLASS(BlueprintType)
 class MAGICULT_API UHotKeyBarViewModel : public UObject
@@ -65,20 +58,8 @@ class MAGICULT_API UHotKeyBarViewModel : public UObject
 
 public:
 	/**
-	 * 필터를 통과한 신호마다 "항상" 발행한다. 값 비교(diff)로 걸러내지 않는다.
-	 *
-	 * (정정) 원래 이 결정의 근거로 "같은 모드 재선택 시 diff가 연출을 삼킨다"를 들었으나,
-	 * 그 시나리오(bRetriggerInstancedAbility로 같은 모드 재활성)는 GA_SelectModeAbility의
-	 * 자기 자신에 대한 ActivationBlockedTags(Character.Mode)가 막고 있어 지금 게임 규칙상
-	 * 도달 불가능하다 — 모드 활성 중에는 그 어빌리티 자체가 재발동될 수 없다. 디테일 재방문
-	 * (예: Fire를 두 번 고르는 것)도 실제로는 값이 같은 두 상태가 "인접"하지 않는다 — 사이에
-	 * 반드시 모드 재진입(다른 PageTag) 이벤트가 끼기 때문에, 단순 "직전 상태와만 비교"하는
-	 * diff로도 안 걸린다.
-	 *
-	 * 그래도 diff를 안 넣는 이유: 이 안전성이 "Character.Mode 자기 블록"이라는 게임 규칙에
-	 * 암묵적으로 기대고 있다. 나중에 그 블록이 풀리면(예: 모드 중 다른 모드로 즉시 전환 허용)
-	 * diff가 조용히 죽은 버튼을 만든다. 소스 필터(관련 태그인가 / NewCount==1인가, 아래
-	 * Handle* 참고)로 중복을 거르는 지금 방식은 그 불변조건이 깨져도 안전하다.
+	 * 필터를 통과한 신호마다 항상 발행한다(diff 비교 없음) — 이 안전성은 게임 규칙(Character.Mode
+	 * 자기 블록)에 암묵적으로 의존한다. 규칙이 풀려도 죽은 버튼이 생기지 않도록 소스 필터만으로 중복을 거른다.
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "HotKeyBar")
 	FOnHotKeyBarStateChangedSignature OnStateChanged;

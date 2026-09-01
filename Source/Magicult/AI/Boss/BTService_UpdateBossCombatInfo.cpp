@@ -72,7 +72,6 @@ void UBTService_UpdateBossCombatInfo::TickNode(UBehaviorTreeComponent& OwnerComp
 	}
 	else if (Candidates.Num() > 0)
 	{
-		// ClosestTargetBias 확률로 최단거리 대상을, 그 외에는 후보 중 무작위로 선택한다.
 		SelectedTarget = (FMath::FRand() < ClosestTargetBias)
 			? ClosestActor
 			: Candidates[FMath::RandHelper(Candidates.Num())];

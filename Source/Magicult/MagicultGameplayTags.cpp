@@ -681,9 +681,9 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 
 	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Fire, GameplayTags.Attributes_Affinity_FireAffinity);
 	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Ice, GameplayTags.Attributes_Affinity_IceAffinity);
-	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Earth, GameplayTags.Attributes_Affinity_FireAffinity);
-	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Wind, GameplayTags.Attributes_Affinity_FireAffinity);
-	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Lightning, GameplayTags.Attributes_Affinity_FireAffinity);
+	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Earth, GameplayTags.Attributes_Affinity_EarthAffinity);
+	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Wind, GameplayTags.Attributes_Affinity_WindAffinity);
+	GameplayTags.ElementsToAffinity.Add(GameplayTags.Magic_Element_Lightning, GameplayTags.Attributes_Affinity_LightningAffinity);
 
 	GameplayTags.ElementsToResistances.Add(GameplayTags.Magic_Element_Fire, GameplayTags.Attributes_Resistance_FireResistance);
 	GameplayTags.ElementsToResistances.Add(GameplayTags.Magic_Element_Ice, GameplayTags.Attributes_Resistance_IceResistance);

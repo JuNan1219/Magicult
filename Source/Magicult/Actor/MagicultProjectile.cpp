@@ -12,7 +12,6 @@
 #include "Magicult/MagicultGameplayTags.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/KismetSystemLibrary.h"
-// Sets default values
 AMagicultProjectile::AMagicultProjectile()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -214,7 +213,6 @@ void AMagicultProjectile::ApplyColliderSpec(const FSpellColliderSpec& ColliderSp
 
 }
 
-// Called when the game starts or when spawned
 void AMagicultProjectile::BeginPlay()
 {
 	Super::BeginPlay();
@@ -320,10 +318,8 @@ void AMagicultProjectile::ConfigureCollisionForPolicy(ESpellCollisionEventPolicy
 		return;
 	}
 
-	// 기본값 초기화
+	// 기본값 초기화 (오버랩/히트 이벤트 모두 끔)
 	Collider->SetGenerateOverlapEvents(false);
-
-	// Hit 이벤트 발생용
 	Collider->SetNotifyRigidBodyCollision(false);
 
 	switch (Policy)
@@ -442,7 +438,6 @@ void AMagicultProjectile::PrepareCleanup_Implementation()
 	// 더 이상 LifeSpan으로 다시 Expire/Destroy 흐름 타지 않게 정리
 	SetLifeSpan(0.f);
 
-	// 새 충돌/트리거 방지
 	UnbindCollisionEvents();
 
 	UPrimitiveComponent* Collider = GetCollider();
@@ -456,14 +451,12 @@ void AMagicultProjectile::PrepareCleanup_Implementation()
 
 	SetActorEnableCollision(false);
 
-	// 이동 중단
 	if (ProjectileMovement)
 	{
 		ProjectileMovement->StopMovementImmediately();
 		ProjectileMovement->Deactivate();
 	}
 
-	// 시각적으로 제거
 	if (NiagaraComponent)
 	{
 		NiagaraComponent->Deactivate();

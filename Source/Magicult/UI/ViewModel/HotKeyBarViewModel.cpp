@@ -32,24 +32,10 @@ void UHotKeyBarViewModel::HandleMagicModeChanged(bool bActive)
 
 void UHotKeyBarViewModel::HandleModeTagChanged(const FGameplayTag& ModeTag, int32 NewCount)
 {
-	// Character.Mode.* 제거 이벤트가 오는 경로가 두 가지다.
-	//  1) 직접 모드 전환: USelectModeGameplayAbility::ActivateAbility 가 재활성 시
-	//     이전 GE를 제거하고 새 GE를 적용한다 — 제거+추가가 한 함수 호출 안에서 짝을 이룬다.
-	//  2) 디테일 확정: GA_Fire 등 디테일 GA 전부가 UGameplayAbility::CancelAbilitiesWithTag
-	//     (엔진 내장 선언적 프로퍼티, Class Defaults에 값만 채우면 PreActivate에서 자동
-	//     실행된다 — BP 그래프 호출 노드가 아니다)에 Character.Mode를 갖고 있어, 활성화
-	//     직전 엔진이 SelectModeGameplayAbility 인스턴스를 자동으로 캔슬한다.
-	//     이 제거는 추가와 짝을 이루지 않는다 — 다음 상위 모드 선택은 별개의 나중 입력이다.
-	//
-	// 두 경로 모두 "제거는 무조건 무시"로 충분하다. 짝이 있든 없든 처리 대상 자체가 안 생긴다.
-	// 페이지를 되돌리는 건 다른 핸들러가 담당한다 — 상세 확정은 HandleSpellTagCommitted,
-	// 마법 모드 종료는 HandleMagicModeChanged(false).
-	//
-	// NewCount == 1(진짜 0→1 전이)만 커밋으로 본다. NewCount > 0(예전 방식)로는 부족하다 —
-	// SelectModeGameplayAbility가 로컬 예측으로 전환된 뒤, 서버 확정 GE가 나중에 복제되어
-	// 도착할 때 GAS 재조정이 조용히 승격되지 않고 "지우고 다시 추가"하는 방식이면 카운트가
-	// 1→0→1로 다시 움직인다. 이 필터는 그 두 번째 "추가"까지는 못 막지만(둘 다 정상적으로
-	// 0→1 전이이므로), 최소한 재조정이 1→2처럼 카운트만 잠깐 튀는 경우는 걸러준다.
+	// Character.Mode.* 제거는 직접 모드 전환과 디테일 확정(CancelAbilitiesWithTag로 인한 자동 캔슬)
+	// 양쪽에서 발생하며, 둘 다 무조건 무시해도 된다 — 페이지 복귀는 HandleSpellTagCommitted /
+	// HandleMagicModeChanged(false)가 담당한다. NewCount>0이 아니라 ==1(0→1 전이)만 커밋으로 보는
+	// 이유: 서버 확정 GE 복제 시 GAS 재조정이 "지우고 다시 추가"하면 카운트가 1→0→1로 움직인다.
 	if (NewCount != 1)
 	{
 		return;
@@ -88,13 +74,10 @@ void UHotKeyBarViewModel::HandleSpellTagCommitted(const FSpellState& NewSpellSta
 	// 모드 목록의 bConfigured 표시가 정확하다.
 	CachedSpellState = NewSpellState;
 
-	// UMagicComponent::ClearSpellState() 는 빈 ChangedTag로도 브로드캐스트한다(마법 모드 진입 시).
-	// 그건 확정이 아니므로 연출/페이지 전환은 안 한다. 다만 지금 모드 목록을 보고 있다면
-	// 방금 갱신된 캐시로 bConfigured 표시만 새로고침한다(연출 없음, CommittedSlot은 그대로 없음).
-	//
-	// 이 새로고침이 필요한 이유: GA_MagicMode가 "모드 진입 태그 부여"와 "ClearSpellState 호출"을
-	// 어느 순서로 하는지가 BP 그래프에 있어 C++에서 보장할 수 없다(2단계 WaitDelay 확인 미결).
-	// 태그가 먼저 오면 모드 목록이 갱신 전 캐시로 그려졌다가, 뒤이은 이 브로드캐스트로 바로잡힌다.
+	// ClearSpellState()는 마법 모드 진입 시 빈 ChangedTag로도 브로드캐스트한다 — 확정이 아니므로
+	// 연출/페이지 전환은 안 하지만, 모드 목록을 보고 있다면 bConfigured만 새로고침한다.
+	// GA_MagicMode의 "모드 진입 태그 부여"와 "ClearSpellState 호출" 순서를 BP 그래프에 둬 C++에서
+	// 보장 못 하므로, 태그가 먼저 와도 뒤이은 이 브로드캐스트가 표시를 바로잡는다.
 	if (!CommittedTag.IsValid())
 	{
 		if (State.bVisible && State.PageTag == FMagicultGameplayTags::Get().Character_State_MagicMode)

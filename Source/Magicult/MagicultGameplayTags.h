@@ -6,11 +6,8 @@
 #include "GameplayTagContainer.h"
 
 /**
- * MagiucultGameplayTags
- * 
- * Singleton contating natice Gameplay Tags
+ * 네이티브 GameplayTag 싱글톤 캐시. InitializeNativeGameplayTags()가 앱 시작 시 태그를 채운다.
  */
-
 struct FMagicultGameplayTags
 {
 public:

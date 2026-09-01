@@ -7,11 +7,8 @@
 #include "BTTask_MoveToPatternRange.generated.h"
 
 /**
- * 선택된 패턴이 아직 실행 거리 밖이면 타겟 쪽으로 접근한다.
- *
- *  - 실행 거리 안에 들어오면 Succeeded
- *  - PatternTimeout 초과 / 실행 최소 거리보다 안쪽(too close)이면 패턴 포기 후 Failed
- *
+ * 선택된 패턴이 아직 실행 거리 밖이면 타겟 쪽으로 접근한다. 실행 거리 안에 들어오면 Succeeded,
+ * PatternTimeout 초과나 실행 최소 거리보다 안쪽(too close)이면 패턴을 포기하고 Failed.
  * "too close 시 뒤로 빠지는 이동"은 초기 구현에서 다루지 않고 재선택으로 넘긴다(문서 12장).
  */
 UCLASS()

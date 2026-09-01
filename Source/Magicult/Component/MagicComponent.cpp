@@ -63,10 +63,8 @@ void UMagicComponent::AttachMagicCircle()
 
 void UMagicComponent::HandleSpellStateChange(FSpellState Current, FGameplayTag ChangedTag)
 {
-	// 엘리먼트 태그에 맞게 마법진 메테리얼 변경
 	SetMagicCircleMaterialByTag(Current.ElementTagPair.Tag);
 	UpdateMagicCircleSpeed(Current.SpeedTag);
-	// 디렉션 태그에 맞게 마법진 위치 변경
 	UpdateMagicCircleDirection(Current.DirectionTag);
 }
 

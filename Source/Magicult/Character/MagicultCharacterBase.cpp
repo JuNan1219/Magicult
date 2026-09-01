@@ -264,6 +264,13 @@ void AMagicultCharacterBase::MulticastHandleDeath_Implementation()
 
 	Dissolve();
 	bDead = true;
+
+	// bDead가 사망 판정의 SSOT이고 이 태그는 그 미러링이다. 서버+모든 클라가 이 멀티캐스트 함수 안에서
+	// 각자 로컬 ASC에 붙여야 CanActivateAbility가 각 머신에서 즉시 서버 권위대로 어빌리티를 막는다.
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(FMagicultGameplayTags::Get().Character_State_Dead);
+	}
 }
 
 void AMagicultCharacterBase::Revive()
@@ -330,6 +337,11 @@ void AMagicultCharacterBase::MulticastHandleRevive_Implementation()
 	}
 
 	bDead = false;
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->RemoveLooseGameplayTag(FMagicultGameplayTags::Get().Character_State_Dead);
+	}
 }
 
 void AMagicultCharacterBase::RestoreDefaultMaterials()
