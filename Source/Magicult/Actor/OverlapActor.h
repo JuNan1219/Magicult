@@ -32,6 +32,8 @@ public:
 	void Expire();
 	virtual void OnExpired();
 
+	void SetOverlapConfig(const UOverlapDamageConfig* InConfig);
+
 	UFUNCTION(BlueprintCallable)
 	void SetAttackSpec(const FAttackSpec& InAttackSpec);
 
@@ -72,6 +74,17 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	/**
+	 * Config를 적용하는 확장 지점. beginplay나 config 세팅 시점에 이걸 호출한다.
+	 * BP에서 override하면 콜라이더 크기 등 자기 컴포넌트 초기화를 추가할 수 있고,
+	 * 이때 CollisionGuard 반영을 위해 반드시 Parent를 호출해야 한다.
+	 * 스폰 직후/BeginPlay 이전이든 이후든 안전하게 호출 가능(타이밍은 내부에서 처리).
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Overlap")
+	void ApplyOverlapConfig();
+
+	void ApplyOverlapConfig_Implementation();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FAttackSpec AttackSpec;
 
@@ -89,6 +102,9 @@ protected:
 	// Blueprint에서 설정하는 바인딩 원본
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly)
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<const UOverlapDamageConfig> OverlapConfig;
 private:
 	UFUNCTION()
 	void HandleGuardedCollision(const FGuardedCollisionEvent& CollisionEvent);
@@ -99,4 +115,6 @@ private:
 
 	UPROPERTY()
 	bool bCleanupPrepared = false;
+
+	
 };

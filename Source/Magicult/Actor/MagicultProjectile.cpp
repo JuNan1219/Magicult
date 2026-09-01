@@ -81,6 +81,7 @@ void AMagicultProjectile::SetProjectileSpawnData(const FSpellContext& InSpellCon
 	ProjectileClientInitData.ProjectileCollider = Spec.ProjectileCollider;
 	ProjectileClientInitData.ColliderEventPolicy = Spec.CollisionEventPolicy;
 	ProjectileClientInitData.Bounciness = Spec.Bounciness;
+	ProjectileClientInitData.RehitCooldown = Spec.RehitCooldown;
 
 	AttackSpec.BaseDamage = Spec.BaseDamage;
 	AttackSpec.ElementTag = Spec.ElementTag;
@@ -127,6 +128,7 @@ void AMagicultProjectile::InitializeProjectile()
 	SpellContext.DamageCauser = this;
 
 	CollisionGuard->SetCollisionComponent(Collider);
+	CollisionGuard->RehitCooldown = ProjectileClientInitData.RehitCooldown;
 	ApplyColliderSpec(ProjectileClientInitData.ProjectileCollider);
 	if (NiagaraComponent)
 	{
@@ -359,7 +361,8 @@ void AMagicultProjectile::ConfigureCollisionForPolicy(ESpellCollisionEventPolicy
 	{
 		const bool bBounce = (Policy == ESpellCollisionEventPolicy::Bounce);
 		ProjectileMovement->bShouldBounce = bBounce;
-		ProjectileMovement->BounceVelocityStopSimulatingThreshold = bBounce ? 20.f : 0.f;
+		// TODO : 무중력 상태에서 어색함
+		//ProjectileMovement->BounceVelocityStopSimulatingThreshold = bBounce ? 0.f : 0.f;
 		if (bBounce)
 			ProjectileMovement->Bounciness = ProjectileClientInitData.Bounciness;
 	}

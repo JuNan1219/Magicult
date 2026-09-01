@@ -99,8 +99,16 @@ bool UCollisionGuardComponent::IsAuthorityAllowed() const
 bool UCollisionGuardComponent::IsValidImpact(AActor* OtherActor) const
 {
 	if (!OtherActor) return false;
-	const AActor* Owner = GetOwner();
-	if (bIgnoreOwner && (OtherActor == Owner || OtherActor == Owner->GetInstigator())) return false;
+
+	if (bIgnoreOwner)
+	{
+		if (const AActor* MyActor = GetOwner())
+		{
+			if (OtherActor == MyActor->GetOwner()) return false;
+			if (OtherActor == MyActor->GetInstigator()) return false;
+		}
+	}
+
 	if (IgnoredActors.Contains(OtherActor)) return false;
 	return true;
 }

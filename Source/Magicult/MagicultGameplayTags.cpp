@@ -633,6 +633,10 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("Trigger.Projectile.Depleted"),
 		TEXT("")
 	);
+	GameplayTags.Trigger_OverlapActor_Expire = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("Trigger.OverlapActor.Expire"),
+		TEXT("")
+	);
 
 	// 트리거 추가 정보들
 	GameplayTags.AttackType_Direct = UGameplayTagsManager::Get().AddNativeGameplayTag(

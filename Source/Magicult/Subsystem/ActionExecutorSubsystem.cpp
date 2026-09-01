@@ -310,14 +310,17 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteApplyDebuff(const F
 		return FSpellActionExecutionResult(false);
 
 	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
-	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
+
+	AActor* TargetActor = ResolveActorByPolicy(DebuffSpec.TargetPolicy, Context);
+	UAbilitySystemComponent* TargetASC = TargetActor
+		? UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor)
+		: nullptr;
 	if (!SourceASC || !TargetASC)
 	{
 		return FSpellActionExecutionResult(false);
 	}
 
 	// 사망한 대상에게는 디버프 적용 안 함
-	AActor* TargetActor = Context.TargetActor.Get();
 	if (TargetActor && TargetActor->Implements<UCombatInterface>() && ICombatInterface::Execute_IsDead(TargetActor))
 	{
 		return FSpellActionExecutionResult(false);

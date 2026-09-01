@@ -79,6 +79,10 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnEnemyDiedSignature OnDeath;
 
+	// 매치 종료 등으로 전투를 멈춘다(서버). BT 정지 + 이동 정지 + 진행 중 어빌리티 취소.
+	// Die()와 달리 사망 처리는 하지 않는다.
+	void StopCombat();
+
 	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")

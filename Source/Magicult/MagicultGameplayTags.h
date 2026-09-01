@@ -225,6 +225,7 @@ public:
 	FGameplayTag Trigger_Projectile_SpawnFailure;
 	FGameplayTag Trigger_Projectile_Expire;
 	FGameplayTag Trigger_Projectile_Depleted;
+	FGameplayTag Trigger_OverlapActor_Expire;
 
 	FGameplayTag AttackType_Direct;
 	FGameplayTag HitType_Environment;

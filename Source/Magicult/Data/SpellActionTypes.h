@@ -65,6 +65,11 @@ struct FSpellDebuffActionSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FDebuffEffectEntry> EffectSpecs;
+
+	// 디버프를 받을 대상. 기본값은 Target(피격 대상). 지형 충돌로 자기 자신을 기절시키는 등의
+	// 케이스에서는 Source로 지정해 시전자 자신을 대상으로 리다이렉트한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	ESpellActionTargetPolicy TargetPolicy = ESpellActionTargetPolicy::Target;
 };
 
 USTRUCT(BlueprintType)

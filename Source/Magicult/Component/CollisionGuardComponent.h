@@ -64,14 +64,14 @@ public:
 
 	/** true면 쿨다운 후 같은 대상을 다시 통과시킨다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision Guard")
-	bool bCanHitSameTargetAgain = false;
+	bool bCanHitSameTargetAgain = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision Guard", meta = (ClampMin = "0.0"))
 	float RehitCooldown = 0.25f;
 
 	/** true면 Tick에서 Overlap 재타격을 자동 처리한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision Guard")
-	bool bUseComponentTickForRehit = false;
+	bool bUseComponentTickForRehit = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision Guard")
 	bool bIgnoreOwner = true;
