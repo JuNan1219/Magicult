@@ -23,7 +23,8 @@ UAbilityTask_MoveTowardTarget* UAbilityTask_MoveTowardTarget::MoveTowardTarget(
 	FVector InTargetLocation,
 	float InMoveDistance,
 	float InAcceptanceRadius,
-	bool bInDrawDebug
+	bool bInDrawDebug,
+	float InStopDistanceFromWall
 )
 {
 	UAbilityTask_MoveTowardTarget* Task =
@@ -34,6 +35,7 @@ UAbilityTask_MoveTowardTarget* UAbilityTask_MoveTowardTarget::MoveTowardTarget(
 	Task->MoveDistance = InMoveDistance;
 	Task->AcceptanceRadius = InAcceptanceRadius;
 	Task->bDrawDebug = bInDrawDebug;
+	Task->StopDistanceFromWall = InStopDistanceFromWall;
 
 	return Task;
 }
@@ -196,9 +198,6 @@ bool UAbilityTask_MoveTowardTarget::ResolveMoveLocation(FVector& OutMoveLocation
 	}
 
 	const FVector DesiredMoveLocation = StartLocation + Direction * MoveDistance;
-
-	// 벽에 딱 붙지 않도록 약간 앞에서 멈춤.
-	const float StopDistanceFromWall = 50.f;
 
 	const FVector TraceStart = StartLocation;
 	const FVector TraceEnd = DesiredMoveLocation;

@@ -5,6 +5,9 @@
 #include "MagicultGameState.h"
 #include "MagicultGameInstance.h"
 #include "Magicult/Character/MagicultEnemy.h"
+#include "Magicult/Character/MagicultBoss.h"
+#include "Magicult/Character/MagicultCharacter.h"
+#include "Magicult/Interface/CombatInterface.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
@@ -122,6 +125,107 @@ void AMagicultGameModeBase::HandleMatchHasStarted()
 		if (AMagicultEnemy* Enemy = *It)
 		{
 			Enemy->InitializeForMatch(HealthMultiplier);
+		}
+	}
+}
+
+void AMagicultGameModeBase::NotifyBossDefeated(AMagicultEnemy* DefeatedBoss)
+{
+	if (!HasAuthority() || !bEndMatchOnBossDefeated) return;
+
+	// 보스가 여럿일 수 있으므로 "이 보스가 마지막인가"를 월드 순회로 확인한다.
+	// 호출 시점엔 DefeatedBoss의 bDead가 이미 서 있어 자기 자신은 자연히 걸러진다.
+	for (TActorIterator<AMagicultBoss> It(GetWorld()); It; ++It)
+	{
+		AMagicultBoss* Boss = *It;
+		if (!IsValid(Boss)) continue;
+		if (!ICombatInterface::Execute_IsDead(Boss))
+		{
+			return;
+		}
+	}
+
+	EndMatchWithOutcome(EMatchOutcome::Victory);
+}
+
+void AMagicultGameModeBase::NotifyPlayerDied(APawn* DeadPawn)
+{
+	if (!HasAuthority() || !bEndMatchOnPartyWipe) return;
+
+	if (IsPartyWiped())
+	{
+		EndMatchWithOutcome(EMatchOutcome::Defeat);
+	}
+}
+
+bool AMagicultGameModeBase::IsPartyWiped() const
+{
+	bool bAnyPlayerPawn = false;
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC) continue;
+
+		APawn* Pawn = PC->GetPawn();
+		// 폰이 없는 상태(스폰 전/이탈 직후)는 판정에서 제외한다. 여기서 dead로 치면
+		// 매치 시작 직후 스폰 레이스에 패배가 터진다.
+		if (!IsValid(Pawn) || !Pawn->Implements<UCombatInterface>()) continue;
+
+		bAnyPlayerPawn = true;
+
+		if (!ICombatInterface::Execute_IsDead(Pawn))
+		{
+			return false;
+		}
+
+		// 테스트 부활이 예약된 플레이어는 곧 돌아오므로 전멸로 보지 않는다.
+		const AMagicultCharacter* Character = Cast<AMagicultCharacter>(Pawn);
+		if (Character && Character->IsAwaitingRespawn())
+		{
+			return false;
+		}
+	}
+
+	return bAnyPlayerPawn;
+}
+
+void AMagicultGameModeBase::EndMatchWithOutcome(EMatchOutcome Outcome)
+{
+	// InProgress에서만 끝낼 수 있다. 승리/패배가 같은 프레임에 겹쳐도 먼저 온 쪽만 반영된다.
+	if (GetMatchState() != MatchState::InProgress) return;
+
+	PendingOutcome = Outcome;
+	EndMatch();
+}
+
+void AMagicultGameModeBase::HandleMatchHasEnded()
+{
+	Super::HandleMatchHasEnded();
+
+	if (AMagicultGameState* MagicultGameState = GetGameState<AMagicultGameState>())
+	{
+		MagicultGameState->SetMatchOutcome(PendingOutcome);
+	}
+
+	// 결과 화면 뒤에서 전투가 계속 돌지 않도록 정리한다.
+	for (TActorIterator<AMagicultEnemy> It(GetWorld()); It; ++It)
+	{
+		if (AMagicultEnemy* Enemy = *It)
+		{
+			Enemy->StopCombat();
+		}
+	}
+
+	// 패배 화면 위로 플레이어가 되살아나는 것을 막는다(테스트 부활 타이머 취소).
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC) continue;
+
+		if (AMagicultCharacter* Character = Cast<AMagicultCharacter>(PC->GetPawn()))
+		{
+			Character->CancelPendingRespawn();
 		}
 	}
 }

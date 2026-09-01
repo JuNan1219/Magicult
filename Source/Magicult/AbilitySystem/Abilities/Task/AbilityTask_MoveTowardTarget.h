@@ -29,7 +29,8 @@ public:
 		FVector InTargetLocation,
 		float InMoveDistance,
 		float InAcceptanceRadius = 30.f,
-		bool bInDrawDebug = false
+		bool bInDrawDebug = false,
+		float InStopDistanceFromWall = 50.f
 	);
 
 	UPROPERTY(BlueprintAssignable)
@@ -63,6 +64,10 @@ protected:
 
 	UPROPERTY()
 	float AcceptanceRadius = 30.f;
+
+	// 벽에 딱 붙지 않도록 목표 지점을 벽 표면에서 이만큼 앞에서 자른다. 호출자가 캡슐 반지름 등을 고려해 조정 가능.
+	UPROPERTY()
+	float StopDistanceFromWall = 50.f;
 
 	TWeakObjectPtr<class APawn> CachedPawn;
 	TWeakObjectPtr<class AAIController> CachedAIController;

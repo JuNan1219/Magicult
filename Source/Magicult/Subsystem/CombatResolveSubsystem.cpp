@@ -121,7 +121,6 @@ FResolvedSpellProjectileSpec UCombatResolveSubsystem::ResolveProjectileSpec(cons
 				Resolved.InitialSpeed += AmmoSpec->FastShotSpec.AdditionalSpeed;
 				break;
 			case ESpellProjectileFeatureType::Pierce:
-				Resolved.bCanHitSameTargetAgain = AmmoSpec->PierceSpec.bCanHitSameTargetAgain;
 				Resolved.RehitCooldown = AmmoSpec->PierceSpec.RehitCooldown;
 				OutRuntimeState.RemainingPierceCount = AmmoSpec->PierceSpec.MaxPierceCount;
 				break;

@@ -95,6 +95,9 @@ float UBossCombatComponent::ScorePattern(const FBossAttackPatternData& Data, flo
 
 EBossPattern UBossCombatComponent::SelectPattern(float Distance)
 {
+	// 1단계: 후보 수집 + 최고 점수/최고 점수 패턴 파악.
+	// Best는 이후 확률 추첨이 꺼져 있거나 실패했을 때의 폴백으로도 쓰인다.
+	TArray<TPair<EBossPattern, float>, TInlineAllocator<8>> Candidates;
 	EBossPattern Best = EBossPattern::None;
 	float BestScore = -FLT_MAX;
 
@@ -118,11 +121,47 @@ EBossPattern UBossCombatComponent::SelectPattern(float Distance)
 		// 다른 대안이 없으면 감점된 패턴이라도 선택되어야, 유일한 생존 후보가
 		// "직전과 같아서 연속 불가" 하나뿐일 때 보스가 그냥 멈춰버리는 것을 막는다.
 		const float Score = ScorePattern(Data, Distance);
+		Candidates.Emplace(Data.Pattern, Score);
+
 		if (Score > BestScore)
 		{
 			BestScore = Score;
 			Best = Data.Pattern;
 		}
+	}
+
+	// 2단계: 최고 점수에서 SelectionMargin 이내인 후보만 남기고, 점수 차를 지수 가중치로
+	// 변환해 추첨한다. 최고 점수 후보의 가중치는 항상 exp(0) = 1이므로 총합이 0이 되는 일은
+	// 없고, 후보가 하나뿐(전부 감점당한 상황)이면 그대로 그 하나가 뽑힌다.
+	if (SelectionTemperature > KINDA_SMALL_NUMBER && Candidates.Num() > 1)
+	{
+		const float CutLine = BestScore - SelectionMargin;
+
+		TArray<float, TInlineAllocator<8>> Weights;
+		Weights.Reserve(Candidates.Num());
+
+		float TotalWeight = 0.f;
+		for (const TPair<EBossPattern, float>& Candidate : Candidates)
+		{
+			const float Weight = (Candidate.Value >= CutLine)
+				? FMath::Exp((Candidate.Value - BestScore) / SelectionTemperature)
+				: 0.f;
+			Weights.Add(Weight);
+			TotalWeight += Weight;
+		}
+
+		float Roll = FMath::FRandRange(0.f, TotalWeight);
+		for (int32 Index = 0; Index < Candidates.Num(); ++Index)
+		{
+			Roll -= Weights[Index];
+			// Weight가 0인 후보(컷 미달)는 Roll을 줄이지 않으므로 절대 뽑히면 안 된다.
+			if (Roll <= 0.f && Weights[Index] > 0.f)
+			{
+				Best = Candidates[Index].Key;
+				break;
+			}
+		}
+		// 부동소수 오차로 루프가 아무것도 못 고른 경우 Best는 argmax 결과 그대로 유지된다.
 	}
 
 	if (Best != EBossPattern::None)

@@ -37,10 +37,6 @@ void UAttackInstance_OverlapDamage::OnExecuteStarted_Implementation()
 	Super::OnExecuteStarted_Implementation();
 
 	CreateOverlapCollider();
-	if (OverlapActor.IsValid())
-	{
-		OverlapActor->DisableOverlap();
-	}
 }
 
 void UAttackInstance_OverlapDamage::OnFinishedInternal_Implementation()
@@ -48,8 +44,8 @@ void UAttackInstance_OverlapDamage::OnFinishedInternal_Implementation()
 	if (OverlapActor.IsValid())
 	{
 		OverlapActor->DisableOverlap();
+		OverlapActor->Expire();
 	}
-	// TODO : 액터 삭제 트리거 액션
 
 	Super::OnFinishedInternal_Implementation();
 }
@@ -75,15 +71,22 @@ void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 
 	if (!GetWorld()) return;
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = GetOwnerActor();
-
-	OverlapActor = GetWorld()->SpawnActor<AOverlapActor>(
+	OverlapActor = GetWorld()->SpawnActorDeferred<AOverlapActor>(
 		OverlapActorClass,
-		FVector::ZeroVector,
-		FRotator::ZeroRotator,
-		SpawnParams
+		FTransform(),
+		GetOwnerActor()
 	);
+	if (AttackConfig)
+	{
+		const UOverlapDamageConfig* OverlapConfig = Cast<UOverlapDamageConfig>(AttackConfig);
+		if (!OverlapConfig)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("AttackConfig가 UOverlapDamageConfig 타입이 아닙니다. Owner : %s"), *GetOwnerActor()->GetName());
+		}
+		OverlapActor->InitializeWithConfig(Context, OverlapConfig, TriggerActionBindings, AttackSpec, true);
+	}
+
+	OverlapActor->FinishSpawning(FTransform());
 
 	if (!OverlapActor.IsValid())
 	{
@@ -97,7 +100,5 @@ void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 			UE_LOG(LogTemp, Warning, TEXT("액터 Attach에 실패했습니다. Socekt : %s, Owner : %s"), *SocketTag.ToString(), *GetOwnerActor()->GetName());
 			return;
 		}
-
-		OverlapActor->InitializeWithConfig(Context, Cast<UOverlapDamageConfig>(AttackConfig), TriggerActionBindings, AttackSpec, true);
 	}
 }

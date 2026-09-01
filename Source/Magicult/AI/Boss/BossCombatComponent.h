@@ -12,7 +12,7 @@
  *
  * - 패턴 정적 데이터 테이블 보관
  * - 현재 패턴 잠금/타임아웃/쿨다운/Recovery 상태 관리 (전부 서버 시각 비교 기반)
- * - 점수 기반 패턴 선택 로직
+ * - 점수 기반 패턴 선택 로직 (점수를 확률로 변환해 추첨)
  *
  * BehaviorTree 노드는 이 컴포넌트를 읽고/변형하며, 분기에 필요한 최소값만 Blackboard로 미러링한다.
  * 이 클래스는 Blackboard/BT를 전혀 알지 못한다. (순수 로직 → 테스트 용이)
@@ -50,7 +50,7 @@ public:
 
 	// --- 변형 (서버) ---
 
-	// 점수 기반으로 패턴 선택. 성공 시 CurrentPattern/PatternLocked/PatternStartTime 설정.
+	// 점수를 확률로 변환해 패턴 선택. 성공 시 CurrentPattern/PatternLocked/PatternStartTime 설정.
 	// 고를 게 없으면 None 반환(잠그지 않음).
 	EBossPattern SelectPattern(float Distance);
 
@@ -64,6 +64,22 @@ protected:
 	// 편집 가능한 패턴 테이블. 초기에는 Swing 하나만 채워도 된다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Patterns")
 	TArray<FBossAttackPatternData> Patterns;
+
+	// --- 확률 선택 파라미터 ---
+	// 두 노브의 역할은 완전히 분리되어 있다.
+	//   SelectionMargin      = "어디까지 후보로 볼 것인가" (컷 위치)
+	//   SelectionTemperature = "점수 차를 얼마나 크게 볼 것인가" (분포 모양)
+
+	// 최고 점수보다 이만큼 이상 낮은 패턴은 추첨에서 제외한다.
+	// ScorePattern의 하드 배제 감점(-1000)/반복 감점(-50)을 걸러내는 역할도 겸한다.
+	// DistanceWeight보다 크게 잡으면 거리 판단이 사실상 무력해지므로 그보다 작게 유지할 것.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Patterns", meta = (ClampMin = "0.0"))
+	float SelectionMargin = 30.f;
+
+	// 점수 차를 지수 가중치로 변환할 때의 온도. 작을수록 고점수에 쏠리고, 클수록 균등해진다.
+	// 0이면 확률 선택을 끄고 결정론적 최고점 선택(argmax)으로 동작한다. 디버깅/롤백용.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Patterns", meta = (ClampMin = "0.0"))
+	float SelectionTemperature = 10.f;
 
 private:
 	float ScorePattern(const FBossAttackPatternData& Data, float Distance) const;

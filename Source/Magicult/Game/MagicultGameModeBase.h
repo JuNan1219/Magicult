@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "MagicultGameState.h"
 #include "MagicultGameModeBase.generated.h"
 
 class UMagicInfo;
@@ -13,6 +14,7 @@ class UProjectileData;
 class UCharacterClassInfo;
 class UGameplayEffect;
 class AController;
+class AMagicultEnemy;
 
 /**
  *
@@ -60,13 +62,32 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	float MinWaitingSeconds = 0.f;
 
+	// 보스 처치 시 승리로 매치를 끝낼지.
+	UPROPERTY(EditDefaultsOnly, Category = "Match")
+	bool bEndMatchOnBossDefeated = true;
+
+	// 전원 사망 시 패배로 매치를 끝낼지. 테스트 부활(bTestRespawnEnabled)이 걸린 플레이어는
+	// "곧 돌아옴"으로 보고 전멸 판정에서 제외하므로, 부활이 켜진 동안은 사실상 패배하지 않는다.
+	UPROPERTY(EditDefaultsOnly, Category = "Match")
+	bool bEndMatchOnPartyWipe = true;
+
 	// 현재 접속 인원 기준 몬스터 체력 배율을 산정한다(서버).
 	float GetEnemyHealthMultiplier();
+
+	// 보스가 죽으면 보스 자신이 호출한다(서버). 살아있는 보스가 더 없으면 승리로 끝낸다.
+	void NotifyBossDefeated(AMagicultEnemy* DefeatedBoss);
+
+	// 플레이어가 죽으면 캐릭터가 호출한다(서버). 전멸이면 패배로 끝낸다.
+	void NotifyPlayerDied(APawn* DeadPawn);
+
+	// 결과를 확정하고 매치를 끝낸다. InProgress가 아니면 무시한다(중복 종료 가드).
+	void EndMatchWithOutcome(EMatchOutcome Outcome);
 
 protected:
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual void HandleMatchIsWaitingToStart() override;
 	virtual void HandleMatchHasStarted() override;
+	virtual void HandleMatchHasEnded() override;
 	virtual void Logout(AController* Exiting) override;
 
 private:
@@ -80,4 +101,11 @@ private:
 	float WaitingStartTime = 0.f;
 
 	void OnStartTimeout();
+
+	// EndMatchWithOutcome이 기록해두고, HandleMatchHasEnded가 GameState로 흘려보낸다.
+	// (AGameMode::EndMatch는 사유를 전달하지 못하므로 한 프레임 보관이 필요하다.)
+	EMatchOutcome PendingOutcome = EMatchOutcome::None;
+
+	// 살아있는(또는 부활 예정인) 플레이어가 하나도 없으면 true.
+	bool IsPartyWiped() const;
 };

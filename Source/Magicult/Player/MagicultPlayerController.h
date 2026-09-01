@@ -75,6 +75,7 @@ private:
 
 	UMagicultAbilitySystemComponent* GetASC();
 	bool IsStunned();
+	bool IsPawnDead();
 
 	UFUNCTION(Server, Unreliable)
 	void ServerSetFacingYaw(float Yaw);

@@ -84,6 +84,27 @@ void AMagicultEnemy::Die()
 	OnDeath.Broadcast(this);
 }
 
+void AMagicultEnemy::StopCombat()
+{
+	if (!HasAuthority()) return;
+
+	if (MagicultAIController)
+	{
+		MagicultAIController->StopMovement();
+
+		if (UBrainComponent* Brain = MagicultAIController->GetBrainComponent())
+		{
+			Brain->StopLogic(TEXT("CombatStopped"));
+		}
+	}
+
+	// 트리가 멈춰도 이미 활성화된 공격 GA는 계속 도므로 같이 끊는다.
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->CancelAllAbilities();
+	}
+}
+
 void AMagicultEnemy::SpawnLoot()
 {
 	// 오버랩/사망 경로가 클라에서도 탈 수 있으므로 권한을 명시적으로 가드한다.
