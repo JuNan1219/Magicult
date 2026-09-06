@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AttackInstance_OverlapDamage.h"
@@ -52,6 +52,13 @@ void UAttackInstance_OverlapDamage::OnFinishedInternal_Implementation()
 
 void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 {
+	// AOverlapActor는 복제 액터다. 클라가 로컬 사본을 만들면 서버 복제본과 둘이 되어
+	// 히트 트리거가 두 번 발행된다. 생성 권한은 서버만 갖는다.
+	if (!GetWorld() || GetWorld()->IsNetMode(NM_Client))
+	{
+		return;
+	}
+
 	if (!OverlapActorClass)
 	{
 		return;
@@ -68,8 +75,6 @@ void UAttackInstance_OverlapDamage::CreateOverlapCollider()
 	{
 		return;
 	}
-
-	if (!GetWorld()) return;
 
 	OverlapActor = GetWorld()->SpawnActorDeferred<AOverlapActor>(
 		OverlapActorClass,

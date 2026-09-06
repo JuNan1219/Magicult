@@ -24,6 +24,7 @@ void AOverlapActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AOverlapActor, SpellContext);
 	DOREPLIFETIME(AOverlapActor, TriggerActionBindings);
+	DOREPLIFETIME(AOverlapActor, bOverlapActive);
 }
 
 void AOverlapActor::Initialize(const FSpellContext& InContext, const TArray<FSpellTriggerActionBinding>& ParentTriggerActionBindings)
@@ -238,20 +239,39 @@ FVector AOverlapActor::GetActorVelocity() const
 
 void AOverlapActor::EnableOverlap()
 {
-	GetCollider()->SetGenerateOverlapEvents(true);
-	GetCollider()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-
-#if !UE_BUILD_SHIPPING
-	if (bDrawDebug) DrawDebug(true);
-#endif
+	if (HasAuthority())
+	{
+		bOverlapActive = true;
+	}
+	ApplyOverlapActive();
 }
 
 void AOverlapActor::DisableOverlap()
 {
-	GetCollider()->SetGenerateOverlapEvents(false);
-	GetCollider()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (HasAuthority())
+	{
+		bOverlapActive = false;
+	}
+	ApplyOverlapActive();
+}
+
+void AOverlapActor::OnRep_bOverlapActive()
+{
+	ApplyOverlapActive();
+}
+
+void AOverlapActor::ApplyOverlapActive()
+{
+	UPrimitiveComponent* Collider = GetCollider();
+	if (!Collider)
+	{
+		return;
+	}
+
+	Collider->SetGenerateOverlapEvents(bOverlapActive);
+	Collider->SetCollisionEnabled(bOverlapActive ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 
 #if !UE_BUILD_SHIPPING
-	if (bDrawDebug) DrawDebug(false);
+	if (bDrawDebug) DrawDebug(bOverlapActive);
 #endif
 }
