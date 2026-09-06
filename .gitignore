@@ -78,3 +78,6 @@ Content/Assets/
 
 # Claude Code local config (agents/scripts shared per-workstation, settings are per-user)
 .claude/
+
+# Packaged build output
+/MagicultBuild/

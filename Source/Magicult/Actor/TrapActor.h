@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -15,7 +15,10 @@ class MAGICULT_API ATrapActor : public AActor, public IAttackContextProvider, pu
 	GENERATED_BODY()
 
 public:
+    ATrapActor();
+
     virtual void BeginPlay() override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
     void StopTrap();
@@ -38,10 +41,17 @@ public:
     * Interface end
     */
 protected:
+    // 복제된 bTrapActive에 맞춰 StartTrap/StopTrap을 호출한다. 서버/클라 공통 진입점
+    void ApplyTrapActive();
+
+    UFUNCTION()
+    void OnRep_TrapActive();
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FAttackSpec AttackSpec;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    // 서버에서만 값을 바꾸고, 클라는 OnRep으로 같은 연출을 재생한다
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_TrapActive)
     bool bTrapActive = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)

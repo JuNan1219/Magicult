@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "ActionExecutorSubsystem.h"
@@ -120,12 +120,13 @@ bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpe
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
 {
-	// 액션 권한 분리: 코스메틱(Niagara·Cue)은 서버/클라 모두 실행하되 전용 서버에선 렌더러가
-	// 없으므로 스킵하고, 권위(Damage·GE·Knockback 등)는 서버 전용이다. SpawnAttackInstance는
-	// 게임 상태를 바꾸지 않는 Trigger 발생기라 모든 머신에서 항상 실행하며, 여기서 생성되는
-	// 후속 Trigger(예: ApplyDamage)가 실행될 때 이 필터를 다시 통과해 권위를 따로 거른다.
-	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara
-	                      || Action.ActionType == ESpellActionType::PlayCue;
+	// 액션 권한 분리: EmitNiagara는 복제 수단이 없어 코스메틱으로 서버/클라 모두 실행하되 전용
+	// 서버에선 렌더러가 없으므로 스킵한다. PlayCue는 ExecuteGameplayCue 자체가 서버 실행 시
+	// ASC 멀티캐스트로 복제되므로(엔진 기본값) 권위 액션(Damage·GE·Knockback 등)과 동일하게
+	// 서버 전용이다. SpawnAttackInstance는 게임 상태를 바꾸지 않는 Trigger 발생기라 모든
+	// 머신에서 항상 실행하며, 여기서 생성되는 후속 Trigger(예: ApplyDamage)가 실행될 때
+	// 이 필터를 다시 통과해 권위를 따로 거른다.
+	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara;
 
 	const bool bAlwaysExecutes = Action.ActionType == ESpellActionType::SpawnAttackInstance;
 
@@ -650,6 +651,8 @@ FVector UActionExecutorSubsystem::ResolveOriginByPolicy(ESpellActionTargetPolicy
 	return FVector::ZeroVector;
 }
 
+// SpawnSystemAtLocation은 복제되지 않는다 - 이 액션을 실행한 머신에서만 보인다.
+// 전원에게 보여야 하는 이펙트는 PlayCue(서버 실행 -> ASC 멀티캐스트)를 쓸 것.
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteEmitNiagara(const FSpellEmitNiagaraActionSpec& EmitNiagaraSpec, const FSpellContext& Context)
 {
 	FSpellActionExecutionResult Result;
@@ -692,11 +695,27 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecutePlayCue(const FSpel
 	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
 
 	FGameplayCueParameters CueParams;
-	CueParams.Location = Context.bHasHitResult
-		? Context.HitResult.ImpactPoint
-		: (Context.TargetActor.IsValid()
-			? Context.TargetActor->GetActorLocation()
-			: FVector::ZeroVector);
+
+	if (Context.bHasHitResult)
+	{
+		CueParams.Location = Context.HitResult.ImpactPoint;
+	}
+	else if (AActor* CauserActor = Cast<AActor>(Context.DamageCauser.Get()))
+	{
+		CueParams.Location = CauserActor->GetActorLocation();
+	}
+	else if (const IAttackContextProvider* Provider = Cast<IAttackContextProvider>(Context.DamageCauser.Get()))
+	{
+		CueParams.Location = Provider->GetAttackOrigin();
+	}
+	else if (Context.TargetActor.IsValid())
+	{
+		CueParams.Location = Context.TargetActor->GetActorLocation();
+	}
+	else
+	{
+		CueParams.Location = FVector::ZeroVector;
+	}
 
 	CueParams.Normal = Context.bHasHitResult
 		? Context.HitResult.ImpactNormal

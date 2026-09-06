@@ -58,6 +58,16 @@ public:
 	void EnableOverlap();
 	UFUNCTION(BlueprintCallable)
 	void DisableOverlap();
+
+	// 콜라이더 on/off는 컴포넌트 상태라 그 자체론 복제되지 않는다.
+	// 서버가 여기 세팅한 값을 OnRep으로 각 클라가 받아 자기 콜라이더에 동일하게 반영한다.
+	UPROPERTY(ReplicatedUsing = OnRep_bOverlapActive)
+	bool bOverlapActive = false;
+
+	UFUNCTION()
+	void OnRep_bOverlapActive();
+
+	void ApplyOverlapActive();
 	/*
 	* Interface
 	*/
