@@ -506,6 +506,31 @@ void FMagicultGameplayTags::InitializeNativeGameplayTags()
 		FName("GameplayCue.Explosion"),
 		TEXT("")
 	);
+	GameplayTags.GameplayCue_Explosion_Fire = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Explosion.Fire"),
+		TEXT("")
+	);
+	GameplayTags.GameplayCue_Explosion_Ice = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Explosion.Ice"),
+		TEXT("")
+	);
+	GameplayTags.GameplayCue_Explosion_Earth = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Explosion.Earth"),
+		TEXT("")
+	);
+	GameplayTags.GameplayCue_Explosion_Wind = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Explosion.Wind"),
+		TEXT("")
+	);
+	GameplayTags.GameplayCue_Explosion_Lightning = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Explosion.Lightning"),
+		TEXT("")
+	);
+
+	GameplayTags.GameplayCue_Monster_GolemSlam = UGameplayTagsManager::Get().AddNativeGameplayTag(
+		FName("GameplayCue.Monster.GolemSlam"),
+		TEXT("")
+	);
 
 	// Data
 	GameplayTags.Data_Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(

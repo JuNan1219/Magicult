@@ -179,6 +179,13 @@ public:
 	FGameplayTag GameplayCue_Lightning;
 
 	FGameplayTag GameplayCue_Explosion;
+	FGameplayTag GameplayCue_Explosion_Fire;
+	FGameplayTag GameplayCue_Explosion_Ice;
+	FGameplayTag GameplayCue_Explosion_Earth;
+	FGameplayTag GameplayCue_Explosion_Wind;
+	FGameplayTag GameplayCue_Explosion_Lightning;
+
+	FGameplayTag GameplayCue_Monster_GolemSlam;
 
 	// 데이터
 	FGameplayTag Data_Damage;

@@ -52,25 +52,7 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 		return;
 	}
 
-	CurrentAttackInstance = NewObject<UAttackInstance>(this, AttackDefinition.AttackInstanceClass);
-	if (!CurrentAttackInstance)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
 	CurrentAttackDefinition = AttackDefinition;
-	CurrentAttackInstance->SetOwnerActor(ActorInfo->AvatarActor.Get());
-	CurrentAttackInstance->Initialize(
-		UMagicultAbilitySystemLibrary::MakeSpellContext(
-			GetAbilitySystemComponentFromActorInfo(), nullptr,
-			GetAvatarActorFromActorInfo(), nullptr,
-			FHitResult(), false, CurrentAttackInstance),
-		CurrentAttackDefinition.AttackSpec,
-		CurrentAttackDefinition.bOverrideAttackSpec);
-	CurrentAttackInstance->SetInstanceConfig(CurrentAttackDefinition.InstanceConfig);
-	if (CurrentAttackDefinition.SocketTag.IsValid())
-		CurrentAttackInstance->SetSocketTag(CurrentAttackDefinition.SocketTag);
 
 	// Task 등록 먼저 — Execute()가 이벤트를 즉시 발행할 수 있으므로 반드시 선행
 	WaitGameplayEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -107,7 +89,31 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 		}
 	}
 
-	CurrentAttackInstance->Execute();
+	// AttackInstance는 전투 판정의 실행부라 서버에서만 만든다. 클라는 몽타주만 재생하고
+	// 연출은 서버가 쏜 GameplayCue로 받는다.
+	if (ActorInfo->IsNetAuthority())
+	{
+		CurrentAttackInstance = NewObject<UAttackInstance>(this, AttackDefinition.AttackInstanceClass);
+		if (!CurrentAttackInstance)
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
+
+		CurrentAttackInstance->SetOwnerActor(ActorInfo->AvatarActor.Get());
+		CurrentAttackInstance->Initialize(
+			UMagicultAbilitySystemLibrary::MakeSpellContext(
+				GetAbilitySystemComponentFromActorInfo(), nullptr,
+				GetAvatarActorFromActorInfo(), nullptr,
+				FHitResult(), false, CurrentAttackInstance),
+			CurrentAttackDefinition.AttackSpec,
+			CurrentAttackDefinition.bOverrideAttackSpec);
+		CurrentAttackInstance->SetInstanceConfig(CurrentAttackDefinition.InstanceConfig);
+		if (CurrentAttackDefinition.SocketTag.IsValid())
+			CurrentAttackInstance->SetSocketTag(CurrentAttackDefinition.SocketTag);
+
+		CurrentAttackInstance->Execute();
+	}
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }

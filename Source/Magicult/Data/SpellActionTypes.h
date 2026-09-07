@@ -6,7 +6,6 @@
 
 class UGameplayEffect;
 class UGameplayAbility;
-class UNiagaraSystem;
 class UAttackInstance;
 class UAttackInstanceConfig;
 
@@ -21,7 +20,6 @@ enum class ESpellActionType : uint8
 	ApplyDebuff,
 	SpawnActor,
 	ApplyGameplayEffect,
-	EmitNiagara,
 	PlayCue,
 	Knockback,
 	DestroyActor,
@@ -40,6 +38,18 @@ enum class ESpellActionTargetPolicy : uint8
 	HitActor,
 	HitLocation,
 	SocketTransform
+};
+
+UENUM(BlueprintType)
+enum class ESpellCuePlayPolicy : uint8
+{
+	// ASC 없이 위치 기반으로 재생하고 GameState 멀티캐스트로 전 클라에 전파한다.
+	// TargetActor가 GameState라 부착·대상 필터·비월드 카메라셰이크는 쓸 수 없다.
+	World,
+	// 대상 ASC에서 재생. 대상 몸에 부착되거나 맞은 본인만 흔드는 연출용.
+	Target,
+	// 시전자 ASC에서 재생.
+	Source
 };
 
 
@@ -136,30 +146,15 @@ struct FSpellApplyGEActionSpec
 };
 
 USTRUCT(BlueprintType)
-struct FSpellEmitNiagaraActionSpec
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Niagara")
-	TObjectPtr<UNiagaraSystem> Niagara = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Niagara")
-	FTransform RelativeTransform = FTransform::Identity;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Niagara")
-	ESpellActionTargetPolicy TargetPolicy = ESpellActionTargetPolicy::DamageCauser;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Niagara", meta=(EditCondition = "TargetPolicy == ESpellActionTargetPolicy::SocketTransform", EditConditionHides))
-	FGameplayTag SocketTag;
-};
-
-USTRUCT(BlueprintType)
 struct FSpellPlayCueActionSpec
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Cue")
 	FGameplayTag GameplayCueTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action|Cue")
+	ESpellCuePlayPolicy PlayPolicy = ESpellCuePlayPolicy::World;
 };
 
 USTRUCT(BlueprintType)
@@ -236,10 +231,6 @@ struct FSpellActionSpec
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::ApplyGameplayEffect", EditConditionHides))
 	FSpellApplyGEActionSpec ApplyGESpec;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
-		meta = (EditCondition = "ActionType == ESpellActionType::EmitNiagara", EditConditionHides))
-	FSpellEmitNiagaraActionSpec EmitNiagaraSpec;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action",
 		meta = (EditCondition = "ActionType == ESpellActionType::PlayCue", EditConditionHides))

@@ -6,8 +6,6 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffect.h"
 #include "GameplayCueManager.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraSystem.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Magicult/Character/MagicultCharacterBase.h"
@@ -21,8 +19,25 @@
 #include "Magicult/Interface/CombatInterface.h"
 #include "Magicult/Subsystem/CombatSubsystem.h"
 #include "Magicult/Game/MagicultGameInstance.h"
+#include "Magicult/Game/MagicultGameState.h"
 #include "Magicult/Data/ImmunityPolicy.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+
+bool UActionExecutorSubsystem::ShouldCreateSubsystem(UObject* Outer) const
+{
+	if (!Super::ShouldCreateSubsystem(Outer))
+	{
+		return false;
+	}
+
+	const UWorld* World = Cast<UWorld>(Outer);
+	if (!World)
+	{
+		return false;
+	}
+
+	return !World->IsNetMode(NM_Client);
+}
 
 TArray<FSpellTriggerEventData> UActionExecutorSubsystem::ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request, int32& OutActionsExecuted)
 {
@@ -120,26 +135,6 @@ bool UActionExecutorSubsystem::CheckImmunity(const FGameplayTag& Tag, const FSpe
 
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const FSpellActionSpec& Action, const FSpellContext& Context)
 {
-	// 액션 권한 분리: EmitNiagara는 복제 수단이 없어 코스메틱으로 서버/클라 모두 실행하되 전용
-	// 서버에선 렌더러가 없으므로 스킵한다. PlayCue는 ExecuteGameplayCue 자체가 서버 실행 시
-	// ASC 멀티캐스트로 복제되므로(엔진 기본값) 권위 액션(Damage·GE·Knockback 등)과 동일하게
-	// 서버 전용이다. SpawnAttackInstance는 게임 상태를 바꾸지 않는 Trigger 발생기라 모든
-	// 머신에서 항상 실행하며, 여기서 생성되는 후속 Trigger(예: ApplyDamage)가 실행될 때
-	// 이 필터를 다시 통과해 권위를 따로 거른다.
-	const bool bIsCosmetic = Action.ActionType == ESpellActionType::EmitNiagara;
-
-	const bool bAlwaysExecutes = Action.ActionType == ESpellActionType::SpawnAttackInstance;
-
-	if (!bAlwaysExecutes &&
-	    ((bIsCosmetic && GetWorld()->IsNetMode(NM_DedicatedServer)) ||
-	     (!bIsCosmetic && GetWorld()->IsNetMode(NM_Client))))
-	{
-		// 이 머신에 실행 권한이 없는 액션 - 아무 일도 안 했으므로 프레임 예산 집계에서 제외.
-		FSpellActionExecutionResult SkippedResult;
-		SkippedResult.bDidWork = false;
-		return SkippedResult;
-	}
-
 	switch (Action.ActionType)
 	{
 	case ESpellActionType::ConsumePierce:
@@ -155,8 +150,6 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteSingleAction(const 
 		return ExecuteSpawnActor(Action.SpawnActorSpec, Context);
 	case ESpellActionType::ApplyGameplayEffect:
 		return ExecuteGameplayEffect(Action.ApplyGESpec, Context);
-	case ESpellActionType::EmitNiagara:
-		return ExecuteEmitNiagara(Action.EmitNiagaraSpec, Context);
 	case ESpellActionType::PlayCue:
 		return ExecutePlayCue(Action.PlayCueSpec, Context);
 	case ESpellActionType::Knockback:
@@ -651,37 +644,8 @@ FVector UActionExecutorSubsystem::ResolveOriginByPolicy(ESpellActionTargetPolicy
 	return FVector::ZeroVector;
 }
 
-// SpawnSystemAtLocation은 복제되지 않는다 - 이 액션을 실행한 머신에서만 보인다.
-// 전원에게 보여야 하는 이펙트는 PlayCue(서버 실행 -> ASC 멀티캐스트)를 쓸 것.
-FSpellActionExecutionResult UActionExecutorSubsystem::ExecuteEmitNiagara(const FSpellEmitNiagaraActionSpec& EmitNiagaraSpec, const FSpellContext& Context)
-{
-	FSpellActionExecutionResult Result;
-
-	if (!EmitNiagaraSpec.Niagara)
-	{
-		return Result;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return Result;
-	}
-
-	const FTransform BaseTransform = ResolveTransformByPolicy(EmitNiagaraSpec.TargetPolicy, Context, EmitNiagaraSpec.SocketTag);
-	const FTransform SpawnTransform = BaseTransform * EmitNiagaraSpec.RelativeTransform;
-
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		World,
-		EmitNiagaraSpec.Niagara,
-		SpawnTransform.GetLocation(),
-		SpawnTransform.Rotator(),
-		SpawnTransform.GetScale3D()
-	);
-
-	return Result;
-}
-
+// 코스메틱은 전부 이 경로를 지난다. World 정책은 ASC 없이 GameState 멀티캐스트로 나가고,
+// Target/Source 정책은 해당 ASC의 큐 복제에 얹힌다.
 FSpellActionExecutionResult UActionExecutorSubsystem::ExecutePlayCue(const FSpellPlayCueActionSpec& PlayCueSpec, const FSpellContext& Context)
 {
 	FSpellActionExecutionResult Result;
@@ -691,9 +655,7 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecutePlayCue(const FSpel
 		return Result;
 	}
 
-	UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
-	UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
-
+	bool bLocationResolved = true;
 	FGameplayCueParameters CueParams;
 
 	if (Context.bHasHitResult)
@@ -714,7 +676,8 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecutePlayCue(const FSpel
 	}
 	else
 	{
-		CueParams.Location = FVector::ZeroVector;
+		// ZeroVector로 폴백하지 않는다. 값으로는 "원점에서 터진 연출"과 구분되지 않는다.
+		bLocationResolved = false;
 	}
 
 	CueParams.Normal = Context.bHasHitResult
@@ -722,16 +685,60 @@ FSpellActionExecutionResult UActionExecutorSubsystem::ExecutePlayCue(const FSpel
 		: FVector::UpVector;
 
 	CueParams.Instigator = Context.SourceActor.Get();
+	// causer가 AttackInstance면 서버에서도 nullptr이다. 발사체 causer일 때만 유효한 값.
 	CueParams.EffectCauser = Cast<AActor>(Context.DamageCauser.Get());
-	CueParams.SourceObject = Context.DamageCauser.Get();
 
-	if (TargetASC)
+	switch (PlayCueSpec.PlayPolicy)
 	{
-		TargetASC->ExecuteGameplayCue(PlayCueSpec.GameplayCueTag, CueParams);
+	case ESpellCuePlayPolicy::World:
+	{
+		if (!bLocationResolved)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PlayCue] %s: 위치를 해석하지 못해 큐를 발행하지 않는다."),
+				*PlayCueSpec.GameplayCueTag.ToString());
+			return FSpellActionExecutionResult(false);
+		}
+
+		UWorld* World = GetWorld();
+		AMagicultGameState* GameState = World ? World->GetGameState<AMagicultGameState>() : nullptr;
+		if (!GameState)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PlayCue] %s: World 정책인데 MagicultGameState가 없다."),
+				*PlayCueSpec.GameplayCueTag.ToString());
+			return FSpellActionExecutionResult(false);
+		}
+
+		GameState->PlayWorldCue(PlayCueSpec.GameplayCueTag, CueParams);
+		break;
 	}
-	else if (SourceASC)
+
+	case ESpellCuePlayPolicy::Target:
 	{
+		UAbilitySystemComponent* TargetASC = Context.TargetAbilitySystemComponent.Get();
+		if (!TargetASC)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PlayCue] %s: Target 정책인데 대상 ASC가 없다."),
+				*PlayCueSpec.GameplayCueTag.ToString());
+			return FSpellActionExecutionResult(false);
+		}
+
+		TargetASC->ExecuteGameplayCue(PlayCueSpec.GameplayCueTag, CueParams);
+		break;
+	}
+
+	case ESpellCuePlayPolicy::Source:
+	{
+		UAbilitySystemComponent* SourceASC = Context.SourceAbilitySystemComponent.Get();
+		if (!SourceASC)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PlayCue] %s: Source 정책인데 시전자 ASC가 없다."),
+				*PlayCueSpec.GameplayCueTag.ToString());
+			return FSpellActionExecutionResult(false);
+		}
+
 		SourceASC->ExecuteGameplayCue(PlayCueSpec.GameplayCueTag, CueParams);
+		break;
+	}
 	}
 
 	return Result;

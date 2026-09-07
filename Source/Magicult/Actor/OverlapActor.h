@@ -40,7 +40,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UCollisionGuardComponent> CollisionGuard;
 
-	UPROPERTY(Replicated)
 	FSpellContext SpellContext;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
@@ -109,7 +108,7 @@ protected:
 	virtual void PrepareCleanup_Implementation() override;
 
 	// Blueprint에서 설정하는 바인딩 원본
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FSpellTriggerActionBinding> TriggerActionBindings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

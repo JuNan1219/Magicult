@@ -21,7 +21,6 @@ class MAGICULT_API USpawnProjectileAttackInstance : public UAttackInstance
 public:
 	virtual void HandleEventTag_Implementation(FGameplayTag EventTag);
 private:
-	bool ConvertTagsToProjectileData(const FSpellState& CurrentSpellState, FSpellContext& OutSpellContext, FResolvedSpellProjectileResult& OutResolvedSpellProjectileResult);
 	bool CheckSpellState(const FSpellState& CurrentSpellState);
 
 	void SpawnMagicProjectile(const FSpellState& CurrentSpellState);

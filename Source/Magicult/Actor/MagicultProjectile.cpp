@@ -31,8 +31,6 @@ AMagicultProjectile::AMagicultProjectile()
 void AMagicultProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AMagicultProjectile, SpellContext);
-	DOREPLIFETIME(AMagicultProjectile, TriggerActions);
 	DOREPLIFETIME(AMagicultProjectile, ProjectileClientInitData);
 }
 
@@ -55,9 +53,6 @@ void AMagicultProjectile::OnRep_ProjectileClientInitData()
 	InitializeProjectile();
 }
 
-void AMagicultProjectile::OnRep_TriggerActions()
-{
-}
 
 void AMagicultProjectile::SetProjectileSpawnData(const FSpellContext& InSpellContext, const FResolvedSpellProjectileResult& InResolvedSpellProjectileResult)
 {
