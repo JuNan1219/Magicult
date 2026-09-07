@@ -22,6 +22,8 @@ class MAGICULT_API UCombatResolveSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 	
 public:
+	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+
 	UFUNCTION(BlueprintCallable, Category = "Combat|Resolve")
 	FResolvedSpellProjectileResult ResolveProjectile(const FSpellContext& InSpellContext, const FSpellState& InSpellState) const;
 

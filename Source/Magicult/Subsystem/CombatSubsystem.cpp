@@ -80,7 +80,9 @@ bool UCombatSubsystem::ShouldCreateSubsystem(UObject* Outer) const
         return false;
     }
 
-    return true;
+    // 전투 파이프라인은 서버 권위다. NetDriver가 아직 없는 InitWorld 시점이지만
+    // UWorld가 PendingNetGame URL로 NM_Client를 되돌려주므로 판정이 성립한다.
+    return !World->IsNetMode(NM_Client);
 }
 
 

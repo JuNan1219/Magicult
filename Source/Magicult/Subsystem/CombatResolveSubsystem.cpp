@@ -13,6 +13,22 @@
 
 
 
+bool UCombatResolveSubsystem::ShouldCreateSubsystem(UObject* Outer) const
+{
+	if (!Super::ShouldCreateSubsystem(Outer))
+	{
+		return false;
+	}
+
+	const UWorld* World = Cast<UWorld>(Outer);
+	if (!World)
+	{
+		return false;
+	}
+
+	return !World->IsNetMode(NM_Client);
+}
+
 FResolvedSpellProjectileResult UCombatResolveSubsystem::ResolveProjectile(const FSpellContext& InSpellContext, const FSpellState& InSpellState) const
 {
 	FResolvedSpellProjectileResult Result;

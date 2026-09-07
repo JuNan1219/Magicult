@@ -85,7 +85,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UCollisionGuardComponent> CollisionGuard;
 
-	UPROPERTY(Replicated)
 	FSpellContext SpellContext;
 
 	FResolvedSpellProjectileResult ResolvedProjectileResult;
@@ -97,9 +96,6 @@ public:
 	void OnRep_ProjectileClientInitData();
 
 
-
-	UFUNCTION()
-	void OnRep_TriggerActions();
 
 	virtual void ApplyColliderSpec(const FSpellColliderSpec& ColliderSpec);
 
@@ -132,7 +128,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	float RehitCooldown = 0.5f;
 
-	UPROPERTY(ReplicatedUsing = OnRep_TriggerActions, BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly)
 	TArray<FSpellTriggerActionBinding> TriggerActions;
 private:
 	bool bProjectileInitialized = false;

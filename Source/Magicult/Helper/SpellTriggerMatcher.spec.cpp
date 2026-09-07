@@ -38,7 +38,7 @@ void FSpellTriggerMatcherSpec::Define()
 			Binding.Trigger.TriggerTag = HitTag;
 
 			FSpellActionSpec Action;
-			Action.ActionType = ESpellActionType::EmitNiagara;
+			Action.ActionType = ESpellActionType::PlayCue;
 			Binding.Actions.Add(Action);
 
 			TArray<FSpellActionSpec> Out;
@@ -58,14 +58,14 @@ void FSpellTriggerMatcherSpec::Define()
 			Binding.Trigger.TriggerTag = HitTag;
 
 			FSpellActionSpec Action;
-			Action.ActionType = ESpellActionType::EmitNiagara;
+			Action.ActionType = ESpellActionType::PlayCue;
 			Binding.Actions.Add(Action);
 
 			TArray<FSpellActionSpec> Out;
 			FSpellTriggerMatcher::CollectActions({ Binding }, MakeTriggerEvent(HitTag), Out);
 
-			TestEqual(TEXT("EmitNiagara 1개를 수집해야 한다"), Out.Num(), 1);
-			TestEqual(TEXT("액션 타입이 EmitNiagara여야 한다"), Out[0].ActionType, ESpellActionType::EmitNiagara);
+			TestEqual(TEXT("PlayCue 1개를 수집해야 한다"), Out.Num(), 1);
+			TestEqual(TEXT("액션 타입이 PlayCue여야 한다"), Out[0].ActionType, ESpellActionType::PlayCue);
 		});
 	});
 
@@ -81,7 +81,7 @@ void FSpellTriggerMatcherSpec::Define()
 			Binding.Trigger.TriggerContextTags.AddTag(RadialTag);
 
 			FSpellActionSpec Action;
-			Action.ActionType = ESpellActionType::EmitNiagara;
+			Action.ActionType = ESpellActionType::PlayCue;
 			Binding.Actions.Add(Action);
 
 			// 케이스 A: Radial 태그 없음 -> 수집 안 됨
@@ -116,15 +116,15 @@ void FSpellTriggerMatcherSpec::Define()
 			DamageAction.ActionType = ESpellActionType::ApplyDamage; // HasTargetASC 필요
 			Binding.Actions.Add(DamageAction);
 
-			FSpellActionSpec NiagaraAction;
-			NiagaraAction.ActionType = ESpellActionType::EmitNiagara; // RequiredFlags=None
-			Binding.Actions.Add(NiagaraAction);
+			FSpellActionSpec CueAction;
+			CueAction.ActionType = ESpellActionType::PlayCue; // RequiredFlags=None
+			Binding.Actions.Add(CueAction);
 
 			TArray<FSpellActionSpec> Out;
 			FSpellTriggerMatcher::CollectActions({ Binding }, MakeTriggerEvent(HitTag), Out);
 
-			TestEqual(TEXT("Niagara만 1개 수집 (Damage는 필터됨)"), Out.Num(), 1);
-			TestEqual(TEXT("수집된 액션은 EmitNiagara여야 한다"), Out[0].ActionType, ESpellActionType::EmitNiagara);
+			TestEqual(TEXT("PlayCue만 1개 수집 (Damage는 필터됨)"), Out.Num(), 1);
+			TestEqual(TEXT("수집된 액션은 PlayCue여야 한다"), Out[0].ActionType, ESpellActionType::PlayCue);
 		});
 	});
 
@@ -145,7 +145,7 @@ void FSpellTriggerMatcherSpec::Define()
 			};
 
 			TArray<FSpellTriggerActionBinding> Bindings = {
-				MakeBinding(ESpellActionType::EmitNiagara),
+				MakeBinding(ESpellActionType::Knockback),
 				MakeBinding(ESpellActionType::PlayCue),
 			};
 

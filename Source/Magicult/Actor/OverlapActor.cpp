@@ -22,8 +22,6 @@ AOverlapActor::AOverlapActor()
 void AOverlapActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AOverlapActor, SpellContext);
-	DOREPLIFETIME(AOverlapActor, TriggerActionBindings);
 	DOREPLIFETIME(AOverlapActor, bOverlapActive);
 }
 

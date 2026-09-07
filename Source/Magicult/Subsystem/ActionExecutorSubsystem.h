@@ -19,6 +19,8 @@ class MAGICULT_API UActionExecutorSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
+	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+
 	TArray<FSpellTriggerEventData> ExecuteRequest(const TArray<FSpellActionExecutionRequest>& Request, int32& OutActionsExecuted);
 
 	// Tag를 ImmunityPolicy에서 조회하여 대상 ASC가 면역 태그를 보유 중이면 true 반환
@@ -56,10 +58,6 @@ private:
 		const FSpellApplyGEActionSpec& ApplyGESpec,
 		const FSpellContext& Context);
 
-	FSpellActionExecutionResult ExecuteEmitNiagara(
-		const FSpellEmitNiagaraActionSpec& EmitNiagaraSpec,
-		const FSpellContext& Context);
-
 	FSpellActionExecutionResult ExecutePlayCue(
 		const FSpellPlayCueActionSpec& PlayCueSpec,
 		const FSpellContext& Context);
@@ -75,7 +73,7 @@ private:
 		const FSpellInterruptActionSpec& InterruptSpec,
 		const FSpellContext& Context);
 
-	// --- Policy 기반 위치 해석 (EmitNiagara / SpawnAttackInstance 공용) ---
+	// --- Policy 기반 위치 해석 ---
 	AActor* ResolveActorByPolicy(ESpellActionTargetPolicy Policy, const FSpellContext& Context) const;
 
 	// Policy를 Transform으로 해석. 해석 실패 시 Identity 반환하고 bOutResolved=false.

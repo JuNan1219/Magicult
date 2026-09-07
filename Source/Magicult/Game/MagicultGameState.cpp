@@ -2,6 +2,8 @@
 
 
 #include "MagicultGameState.h"
+#include "AbilitySystemGlobals.h"
+#include "GameplayCueManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
@@ -22,6 +24,31 @@ void AMagicultGameState::BeginPlay()
 	if (!IsMatchInProgress())
 	{
 		ShowWaitingWidget();
+	}
+}
+
+void AMagicultGameState::PlayWorldCue(FGameplayTag CueTag, const FGameplayCueParameters& Params)
+{
+	if (!HasAuthority() || !CueTag.IsValid())
+	{
+		return;
+	}
+
+	NetMulticast_PlayWorldCue(CueTag, Params);
+}
+
+void AMagicultGameState::NetMulticast_PlayWorldCue_Implementation(FGameplayTag CueTag, FGameplayCueParameters Params)
+{
+	// GameState는 위치를 가진 액터가 아니라, Location이 비면 엔진이 GameState 루트(에디터 전용
+	// 스프라이트 = 월드 원점)로 폴백한다. 발신 측 가드가 뚫려도 여기서 막는다.
+	if (Params.Location.IsZero())
+	{
+		return;
+	}
+
+	if (UGameplayCueManager* CueManager = UAbilitySystemGlobals::Get().GetGameplayCueManager())
+	{
+		CueManager->HandleGameplayCue(this, CueTag, EGameplayCueEvent::Executed, Params);
 	}
 }
 

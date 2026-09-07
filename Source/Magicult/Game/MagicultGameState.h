@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
+#include "GameplayEffectTypes.h"
 #include "MagicultGameState.generated.h"
 
 class UUserWidget;
@@ -51,6 +52,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Match")
 	EMatchOutcome GetMatchOutcome() const { return MatchOutcome; }
+
+	// ASC 없는 위치 기반 큐를 전 클라로 전파하는 서버 전용 진입점.
+	// GameState는 항상 relevant하므로 발사체·몬스터가 relevancy 밖으로 나가도 연출이 누락되지 않는다.
+	void PlayWorldCue(FGameplayTag CueTag, const FGameplayCueParameters& Params);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void NetMulticast_PlayWorldCue(FGameplayTag CueTag, FGameplayCueParameters Params);
 
 protected:
 	virtual void BeginPlay() override;

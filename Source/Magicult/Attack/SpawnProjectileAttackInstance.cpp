@@ -28,18 +28,6 @@ void USpawnProjectileAttackInstance::HandleEventTag_Implementation(FGameplayTag 
     }
 }
 
-bool USpawnProjectileAttackInstance::ConvertTagsToProjectileData(const FSpellState& CurrentSpellState, FSpellContext& OutSpellContext, FResolvedSpellProjectileResult& OutResolvedSpellProjectileResult)
-{
-    if (!CurrentSpellState.DirectionTag.IsValid() ||
-        !CurrentSpellState.SpeedTag.IsValid() ||
-        !CurrentSpellState.ElementTagPair.Tag.IsValid() ||
-        !CurrentSpellState.AmmoTypeTagPair.Tag.IsValid())
-        return false;
-
-    OutResolvedSpellProjectileResult = GetWorld()->GetSubsystem<UCombatResolveSubsystem>()->ResolveProjectile(OutSpellContext, CurrentSpellState);
-
-    return true;
-}
 bool USpawnProjectileAttackInstance::CheckSpellState(const FSpellState& CurrentSpellState)
 {
     return (CurrentSpellState.DirectionTag.IsValid() &&
