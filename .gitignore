@@ -81,3 +81,7 @@ Content/Assets/
 
 # Packaged build output
 /MagicultBuild/
+
+# 로컬 전용 문서
+/Docs/
+/CLAUDE.md
