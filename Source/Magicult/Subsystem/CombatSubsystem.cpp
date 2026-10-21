@@ -26,6 +26,13 @@ static TAutoConsoleVariable<int32> CVarMaxActionsPerFrame(
     TEXT("한 프레임에 처리할 최대 Action 수(트리거 단위 휴리스틱, 오버슈트 가능)"),
     ECVF_Default);
 
+// 카운트 누수가 액터 영구 잔존으로 이어지지 않게 하는 안전망. 기본값은 MaxChainDepth에 맞췄다.
+static TAutoConsoleVariable<int32> CVarMaxDestroyDeferFrames(
+    TEXT("Magicult.Combat.MaxDestroyDeferFrames"),
+    8,
+    TEXT("causer 파괴를 미룰 수 있는 최대 프레임 수(초과 시 강제 파괴)"),
+    ECVF_Default);
+
 // TriggerQueue 처리 비용 관측용 계측(Test/Shipping은 자동 컴파일 아웃). 두 경로로 내보낸다:
 // 1) `stat Magicult`/Insights Timing(stats 채널) - DECLARE_*_STAT/SCOPE_CYCLE_COUNTER
 // 2) Insights Counters 트랙(counters 채널) - TRACE_DECLARE_INT_COUNTER/TRACE_COUNTER_SET
@@ -40,11 +47,27 @@ DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers processed / frame"), STAT_Magicult
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers generated / frame"), STAT_Magicult_TriggersGenerated, STATGROUP_Magicult);
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Max chain depth / frame"), STAT_Magicult_MaxChainDepth, STATGROUP_Magicult);
 DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Actions processed / frame"), STAT_Magicult_ActionsProcessed, STATGROUP_Magicult);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Triggers dropped / frame"), STAT_Magicult_TriggersDropped, STATGROUP_Magicult);
+DECLARE_DWORD_ACCUMULATOR_STAT(TEXT("Destroy deferred / frame"), STAT_Magicult_DestroyDeferred, STATGROUP_Magicult);
 
 TRACE_DECLARE_INT_COUNTER(Magicult_TriggersProcessed, TEXT("Magicult/Triggers Processed"));
 TRACE_DECLARE_INT_COUNTER(Magicult_TriggersGenerated, TEXT("Magicult/Triggers Generated"));
 TRACE_DECLARE_INT_COUNTER(Magicult_MaxChainDepth, TEXT("Magicult/Max Chain Depth"));
 TRACE_DECLARE_INT_COUNTER(Magicult_ActionsProcessed, TEXT("Magicult/Actions Processed"));
+TRACE_DECLARE_INT_COUNTER(Magicult_TriggersDropped, TEXT("Magicult/Triggers Dropped"));
+TRACE_DECLARE_INT_COUNTER(Magicult_DestroyDeferred, TEXT("Magicult/Destroy Deferred"));
+
+void UCombatSubsystem::Deinitialize()
+{
+    // 큐에 남은 트리거는 감소 경로를 타지 못하므로 카운트를 통째로 비운다.
+    // 액터 파괴는 월드 정리가 맡으므로 여기서 Destroy를 부르지 않는다.
+    TriggerQueue.Empty();
+    PendingTriggerRefCount.Empty();
+    PendingDestroyActors.Reset();
+    PendingReleaseObjects.Reset();
+
+    Super::Deinitialize();
+}
 
 void UCombatSubsystem::Tick(float DeltaTime)
 {
@@ -100,7 +123,36 @@ void UCombatSubsystem::EnqueueInternal(FSpellTriggerEventData& TriggerEventData)
         TriggerEventData.DamageCauserPin = TStrongObjectPtr<UObject>(TriggerEventData.SpellContext.DamageCauser.Get());
     }
 
+    AddTriggerRef(TriggerEventData.DamageCauserPin.Get());
     TriggerQueue.Enqueue(TriggerEventData);
+}
+
+void UCombatSubsystem::AddTriggerRef(UObject* Causer)
+{
+    // pin이 비었다는 건 enqueue 시점에 이미 causer가 무효라는 뜻 - 보호할 대상이 없다.
+    if (!Causer)
+    {
+        return;
+    }
+
+    ++PendingTriggerRefCount.FindOrAdd(TObjectKey<UObject>(Causer));
+}
+
+void UCombatSubsystem::ReleaseTriggerRef(UObject* Causer)
+{
+    if (!Causer)
+    {
+        return;
+    }
+
+    const TObjectKey<UObject> Key(Causer);
+    if (int32* RefCount = PendingTriggerRefCount.Find(Key))
+    {
+        if (--(*RefCount) <= 0)
+        {
+            PendingTriggerRefCount.Remove(Key);
+        }
+    }
 }
 
 void UCombatSubsystem::RegisterPendingCleanupObject(UObject* RuntimeObject)
@@ -117,7 +169,11 @@ void UCombatSubsystem::RegisterPendingCleanupObject(UObject* RuntimeObject)
 
     if (AActor* Actor = Cast<AActor>(RuntimeObject))
     {
-        PendingDestroyActors.AddUnique(Actor);
+        // 재등록이 DeferredFrames를 리셋하면 유예 상한이 무한정 밀린다.
+        if (!PendingDestroyActors.FindByPredicate([Actor](const FPendingDestroyEntry& Entry) { return Entry.Actor == Actor; }))
+        {
+            PendingDestroyActors.AddDefaulted_GetRef().Actor = Actor;
+        }
     }
     else
     {
@@ -127,15 +183,42 @@ void UCombatSubsystem::RegisterPendingCleanupObject(UObject* RuntimeObject)
 
 void UCombatSubsystem::FlushPendingCleanup()
 {
-    // Actor는 실제 Destroy
-    for (AActor* Actor : PendingDestroyActors)
+    // Actor는 큐에 남은 트리거가 참조하지 않을 때만 실제 Destroy. 참조 중이면 상한까지 미룬다
+    // (PrepareCleanup은 등록 시점에 끝나 있으므로 유예해도 게임플레이/연출에는 영향이 없다).
+    const int32 MaxDeferFrames = CVarMaxDestroyDeferFrames.GetValueOnGameThread();
+    int32 DeferredThisFrame = 0;
+
+    for (int32 Index = PendingDestroyActors.Num() - 1; Index >= 0; --Index)
     {
-        if (IsValid(Actor))
+        FPendingDestroyEntry& Entry = PendingDestroyActors[Index];
+        if (!IsValid(Entry.Actor))
         {
-            Actor->Destroy();
+            PendingDestroyActors.RemoveAtSwap(Index);
+            continue;
         }
+
+        const int32* RefCount = PendingTriggerRefCount.Find(TObjectKey<UObject>(Entry.Actor.Get()));
+        const bool bHasPendingTrigger = RefCount && *RefCount > 0;
+
+        if (bHasPendingTrigger && Entry.DeferredFrames < MaxDeferFrames)
+        {
+            ++Entry.DeferredFrames;
+            ++DeferredThisFrame;
+            continue;
+        }
+
+        if (bHasPendingTrigger)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("CombatSubsystem: 파괴 유예 상한(%d) 초과. 강제 파괴. Actor=%s"),
+                MaxDeferFrames, *Entry.Actor->GetName());
+        }
+
+        Entry.Actor->Destroy();
+        PendingDestroyActors.RemoveAtSwap(Index);
     }
-    PendingDestroyActors.Reset();
+
+    SET_DWORD_STAT(STAT_Magicult_DestroyDeferred, DeferredThisFrame);
+    TRACE_COUNTER_SET(Magicult_DestroyDeferred, DeferredThisFrame);
 
     // UObject는 삭제하지 않음.
     // 강한 참조만 해제해서 GC 가능 상태로 둠.
@@ -153,6 +236,7 @@ void UCombatSubsystem::ProcessTriggerQueue()
     int32 ProcessedThisFrame = 0;
     int32 GeneratedThisFrame = 0;
     int32 MaxDepthThisFrame = 0;
+    int32 DroppedThisFrame = 0;
 
     // 프레임 예산: 트리거 단위로 체크한다(CVarMaxActionsPerFrame 참고). 예산 초과로 못 처리한
     // 트리거는 큐에 남아 다음 Tick에 이어서 처리되며, causer는 DamageCauserPin이 프레임을
@@ -165,19 +249,33 @@ void UCombatSubsystem::ProcessTriggerQueue()
         FSpellTriggerEventData Trigger;
         TriggerQueue.Dequeue(Trigger);
 
+        // 아래 continue 경로들보다 먼저 - 감소가 한 곳이어야 카운트 누수(= 액터 영구 잔존)가 없다.
+        ReleaseTriggerRef(Trigger.DamageCauserPin.Get());
+
         // 깊이 초과 트리거는 skip - break가 아니라 continue로 큐를 끝까지 소진한다.
         // (독립적인 원본 트리거들이 누락되지 않도록)
         if (Trigger.SpellContext.TriggerChainDepth > MaxChainDepth)
         {
             UE_LOG(LogTemp, Warning, TEXT("SpellTrigger: MaxChainDepth(%d) exceeded. TriggerTag=%s"),
                 MaxChainDepth, *Trigger.TriggerTag.ToString());
+            ++DroppedThisFrame;
             continue;
         }
 
-        if (!Trigger.SpellContext.DamageCauser.IsValid()) continue;
+        if (!Trigger.SpellContext.DamageCauser.IsValid())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("SpellTrigger: DamageCauser invalid. TriggerTag=%s"),
+                *Trigger.TriggerTag.ToString());
+            ++DroppedThisFrame;
+            continue;
+        }
 
         IActionSourceInterface* ActionSourceInterface = Cast<IActionSourceInterface>(Trigger.SpellContext.DamageCauser);
-        if (!ActionSourceInterface) continue;
+        if (!ActionSourceInterface)
+        {
+            ++DroppedThisFrame;
+            continue;
+        }
 
         // 실제로 실행되는 트리거 1건 = 타임라인에 개별 이벤트로 보이도록 스코프를 건다.
         // 아래 하위 스코프들이 이 블록 내부를 빈틈없이 채운다.
@@ -233,11 +331,13 @@ void UCombatSubsystem::ProcessTriggerQueue()
     SET_DWORD_STAT(STAT_Magicult_TriggersGenerated, GeneratedThisFrame);
     SET_DWORD_STAT(STAT_Magicult_MaxChainDepth, MaxDepthThisFrame);
     SET_DWORD_STAT(STAT_Magicult_ActionsProcessed, ActionsProcessedThisFrame);
+    SET_DWORD_STAT(STAT_Magicult_TriggersDropped, DroppedThisFrame);
     // counters 채널 → Insights Counters 트랙 (그래프). 매 프레임 세팅해 연속 그래프가 되게 한다.
     TRACE_COUNTER_SET(Magicult_TriggersProcessed, ProcessedThisFrame);
     TRACE_COUNTER_SET(Magicult_TriggersGenerated, GeneratedThisFrame);
     TRACE_COUNTER_SET(Magicult_MaxChainDepth, MaxDepthThisFrame);
     TRACE_COUNTER_SET(Magicult_ActionsProcessed, ActionsProcessedThisFrame);
+    TRACE_COUNTER_SET(Magicult_TriggersDropped, DroppedThisFrame);
 }
 
 bool UCombatSubsystem::IsServer()

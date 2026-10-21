@@ -39,6 +39,8 @@ struct FSpellTriggerEventData
 	// UPROPERTY 불가(BlueprintType USTRUCT + TStrongObjectPtr). TQueue는 비-UPROPERTY 컨테이너라
 	// TObjectPtr는 GC 추적이 안 되므로 TStrongObjectPtr만 유효하다.
 	// EnqueueInternal이 SpellContext.DamageCauser로부터 자동으로 채운다.
+	// 파괴 유예 참조 카운트의 키이기도 하다 - 파괴 후 nullptr이 되는 DamageCauser와 달리
+	// 강참조라 감소 시점에도 같은 포인터를 준다.
 	TStrongObjectPtr<UObject> DamageCauserPin;
 };
 
