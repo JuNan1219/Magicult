@@ -10,6 +10,7 @@
 #include "Magicult/MagicultGameplayTags.h"
 #include "Magicult/Attack/OverlapDamageConfig.h"
 #include "Magicult/Data/SpellTypes.h"
+#include "Magicult/Helper/MagicultDebug.h"
 
 AOverlapActor::AOverlapActor()
 {
@@ -178,7 +179,7 @@ void AOverlapActor::DrawDebug(bool bEnabled)
 #if !UE_BUILD_SHIPPING
 	if (UPrimitiveComponent* Collider = GetCollider())
 	{
-		Collider->SetHiddenInGame(!bEnabled);
+		Collider->SetHiddenInGame(!(bEnabled && IsMagicultDrawDebugEnabled()));
 	}
 #endif
 }

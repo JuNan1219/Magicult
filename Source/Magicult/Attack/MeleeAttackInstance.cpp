@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #if !UE_BUILD_SHIPPING
 #include "DrawDebugHelpers.h"
+#include "Magicult/Helper/MagicultDebug.h"
 #endif
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -92,7 +93,7 @@ bool UMeleeAttackInstance::TryCollectTargets(TArray<AActor*>& OutTargets) const
 	);
 
 #if !UE_BUILD_SHIPPING
-	if (bDrawDebug) DrawDebugSphere(World, Center, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.0f);
+	if (bDrawDebug && IsMagicultDrawDebugEnabled()) DrawDebugSphere(World, Center, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.0f);
 #endif
 
 	if (!bHit)

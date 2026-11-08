@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #if !UE_BUILD_SHIPPING
 #include "DrawDebugHelpers.h"
+#include "Magicult/Helper/MagicultDebug.h"
 #endif
 
 UAbilityTask_MoveAlongArc* UAbilityTask_MoveAlongArc::MoveAlongArc(UGameplayAbility* OwningAbility, FVector InStartLocation, FVector InEndLocation, float InDuration, float InArcHeight, float EndPhaseThreshold, bool bInDrawDebug)
@@ -31,7 +32,7 @@ void UAbilityTask_MoveAlongArc::Activate()
     bTickingTask = true;
 
 #if !UE_BUILD_SHIPPING
-    if (bDrawDebug)
+    if (bDrawDebug && IsMagicultDrawDebugEnabled())
     {
         if (UWorld* World = GetWorld())
         {

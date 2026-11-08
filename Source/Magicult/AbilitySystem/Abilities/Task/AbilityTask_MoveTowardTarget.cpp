@@ -9,6 +9,7 @@
 
 #if !UE_BUILD_SHIPPING
 #include "DrawDebugHelpers.h"
+#include "Magicult/Helper/MagicultDebug.h"
 #endif
 
 UAbilityTask_MoveTowardTarget::UAbilityTask_MoveTowardTarget()
@@ -224,7 +225,7 @@ bool UAbilityTask_MoveTowardTarget::ResolveMoveLocation(FVector& OutMoveLocation
 		OutMoveLocation.Z = StartLocation.Z;
 
 #if !UE_BUILD_SHIPPING
-		if (bDrawDebug)
+		if (bDrawDebug && IsMagicultDrawDebugEnabled())
 		{
 			DrawDebugLine(World, TraceStart, TraceEnd, FColor::Yellow, false, 3.f, 0, 2.f);
 			DrawDebugSphere(World, Hit.ImpactPoint, 15.f, 8, FColor::Red, false, 3.f);
@@ -239,7 +240,7 @@ bool UAbilityTask_MoveTowardTarget::ResolveMoveLocation(FVector& OutMoveLocation
 	OutMoveLocation.Z = StartLocation.Z;
 
 #if !UE_BUILD_SHIPPING
-	if (bDrawDebug)
+	if (bDrawDebug && IsMagicultDrawDebugEnabled())
 	{
 		DrawDebugLine(World, TraceStart, TraceEnd, FColor::Yellow, false, 3.f, 0, 2.f);
 		DrawDebugSphere(World, OutMoveLocation, 20.f, 8, FColor::Green, false, 3.f);
