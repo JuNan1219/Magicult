@@ -82,7 +82,7 @@ protected:
 
 	/** 몽타주 없을 때 GA 최대 지속 시간 */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
-	float AbilityTimeout = 5.f;
+	float AbilityTimeout = 1.f;
 
 	UPROPERTY(Transient)
 	bool bIsEndingAbility = false;

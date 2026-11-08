@@ -27,11 +27,6 @@ public:
 
 	void CursorDirection();
 
-	UFUNCTION(BlueprintCallable)
-	void AddMagicDetailInputContext();
-	UFUNCTION(BlueprintCallable)
-	void RemoveMagicDetailInputContext();
-
 	UPROPERTY(EditAnywhere)
 	float RotationSpeed = 90.f;
 protected:

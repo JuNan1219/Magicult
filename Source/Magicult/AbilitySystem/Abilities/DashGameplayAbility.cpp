@@ -84,7 +84,9 @@ void UDashGameplayAbility::ActivateAbility(
 			1.f,
 			NAME_None,
 			true,
-			1.f);
+			1.f,
+			0.f,
+			true);
 
 		if (PlayMontageTask)
 		{

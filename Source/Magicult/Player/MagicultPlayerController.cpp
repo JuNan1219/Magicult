@@ -60,28 +60,6 @@ void AMagicultPlayerController::ServerSetFacingYaw_Implementation(float Yaw)
 	}
 }
 
-void AMagicultPlayerController::AddMagicDetailInputContext()
-{
-	check(MagicDetailContext);
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-	if (Subsystem)
-	{
-		FModifyContextOptions ModifyContextOptions;
-		ModifyContextOptions.bIgnoreAllPressedKeysUntilRelease = true;
-		Subsystem->AddMappingContext(MagicDetailContext, 1, ModifyContextOptions);
-	}
-}
-
-void AMagicultPlayerController::RemoveMagicDetailInputContext()
-{
-	check(MagicDetailContext);
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
-	if (Subsystem)
-	{
-		Subsystem->RemoveMappingContext(MagicDetailContext);
-	}
-}
-
 void AMagicultPlayerController::CursorTrace()
 {
 	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);

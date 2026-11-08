@@ -66,7 +66,7 @@ void UMagicultDamageGameplayAbility::ActivateAbility(
 	if (AttackDefinition.Montage)
 	{
 		PlayMontageAndWaitTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("AttackMontage"), AttackDefinition.Montage, 1.0f, NAME_None, true, 1.0f);
+			this, TEXT("AttackMontage"), AttackDefinition.Montage, 1.0f, NAME_None, true, 1.0f, 0.f, true);
 		if (!PlayMontageAndWaitTask)
 		{
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
